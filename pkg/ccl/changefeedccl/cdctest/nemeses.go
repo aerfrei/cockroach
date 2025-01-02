@@ -20,15 +20,23 @@ import (
 )
 
 type ChangefeedOption struct {
-	FullTableName bool
-	Format        string
-	KeyInValue    bool
-	SinkType      string
+	FullTableName           bool
+	Format                  string
+	KeyInValue              bool
+	SinkType                string
+	ConfluentSchemaRegistry string
 }
 
 func newChangefeedOption(sinkType string) ChangefeedOption {
+	//if rand.Intn(10) < 1 {
+	//	return ChangefeedOption{
+	//		Format: "csv"
+	//		// need to do diff and initial table scan and stuff for csv
+	//	}
+	//}
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
+	isKafka := strings.Contains(sinkType, "kafka")
 	cfo := ChangefeedOption{
 		FullTableName: rand.Intn(2) < 1,
 
@@ -37,12 +45,23 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 		// messages (see extractKeyFromJSONValue function).
 		// TODO: enable testing key_in_value for cloudstorage and webhook sinks
 		KeyInValue: !isCloudstorage && !isWebhook && rand.Intn(2) < 1,
-		Format:     "json",
 		SinkType:   sinkType,
+	}
+
+	if isKafka && rand.Intn(2) < 1 {
+		cfo.Format = "avro"
+
+		schemaReg := StartTestSchemaRegistry()
+		defer schemaReg.Close()
+		cfo.ConfluentSchemaRegistry = schemaReg.URL()
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
 		cfo.Format = "parquet"
+	}
+
+	if cfo.Format == "" {
+		cfo.Format = "json"
 	}
 
 	return cfo
@@ -55,14 +74,18 @@ func (co ChangefeedOption) String() string {
 
 func (cfo ChangefeedOption) OptionString() string {
 	options := ""
-	if cfo.Format == "parquet" {
-		options = ", format=parquet"
+	if cfo.Format != "json" {
+		options = options + fmt.Sprintf(", format=%s", cfo.Format)
 	}
 	if cfo.FullTableName {
 		options = options + ", full_table_name"
 	}
 	if cfo.KeyInValue {
 		options = options + ", key_in_value"
+	}
+	if cfo.ConfluentSchemaRegistry != "" {
+		options = options + fmt.Sprintf(", confluent_schema_registry='%s'",
+			cfo.ConfluentSchemaRegistry)
 	}
 	return options
 }
@@ -252,6 +275,7 @@ func RunNemesis(
 
 	cfo := newChangefeedOption(sinkType)
 	log.Infof(ctx, "Using changefeed options: %s", cfo.String())
+	fmt.Println("Using changefeed options:", cfo.String())
 	foo, err := f.Feed(fmt.Sprintf(
 		`CREATE CHANGEFEED FOR foo WITH updated, resolved, diff%s`,
 		cfo.OptionString(),
