@@ -23,6 +23,7 @@ type ChangefeedOption struct {
 	FullTableName bool
 	Format        string
 	KeyInValue    bool
+	Diff          bool
 }
 
 func newChangefeedOption(sinkType string) ChangefeedOption {
@@ -37,6 +38,7 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 		// TODO: enable testing key_in_value for cloudstorage and webhook sinks
 		KeyInValue: !isCloudstorage && !isWebhook && rand.Intn(2) < 1,
 		Format:     "json",
+		Diff:       rand.Intn(2) < 1,
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
@@ -53,8 +55,11 @@ func (co ChangefeedOption) String() string {
 
 func (cfo ChangefeedOption) OptionString() string {
 	options := ""
+	if cfo.Diff {
+		options = options + ", diff"
+	}
 	if cfo.Format == "parquet" {
-		options = ", format=parquet"
+		options = options + ", format=parquet"
 	}
 	if cfo.FullTableName {
 		options = options + ", full_table_name"
@@ -78,6 +83,10 @@ var NemesesOptions = []NemesesOption{
 	{
 		EnableFpValidator: false,
 		EnableSQLSmith:    true,
+	},
+	{
+		EnableFpValidator: false,
+		EnableSQLSmith:    false,
 	},
 }
 
@@ -251,7 +260,7 @@ func RunNemesis(
 	cfo := newChangefeedOption(testName)
 	log.Infof(ctx, "Using changefeed options: %s", cfo.String())
 	foo, err := f.Feed(fmt.Sprintf(
-		`CREATE CHANGEFEED FOR foo WITH updated, resolved, diff%s`,
+		`CREATE CHANGEFEED FOR foo WITH updated, resolved%s`,
 		cfo.OptionString(),
 	))
 	if err != nil {

@@ -193,6 +193,7 @@ type beforeAfterValidator struct {
 	resolved       map[string]hlc.Timestamp
 	fullTableName  bool
 	keyInValue     bool
+	diff           bool
 
 	failures []string
 }
@@ -213,6 +214,7 @@ func NewBeforeAfterValidator(
 		table:          table,
 		fullTableName:  option.FullTableName,
 		keyInValue:     option.KeyInValue,
+		diff:           option.Diff,
 		primaryKeyCols: primaryKeyCols,
 		resolved:       make(map[string]hlc.Timestamp),
 	}, nil
@@ -286,6 +288,15 @@ func (v *beforeAfterValidator) NoteRow(
 	// updated timestamp.
 	if err := v.checkRowAt("after", keyJSONAsArray, afterJSON, updated); err != nil {
 		return err
+	}
+
+	if !v.diff {
+		// If the diff option is not specified in the change feed,
+		// we don't expect the rows to contain a "before" field.
+		if beforeJson != nil {
+			return errors.Errorf(`expected before to be nil, got %s`, beforeJson.String())
+		}
+		return nil
 	}
 
 	if v.resolved[partition].IsEmpty() && (beforeJson == nil || beforeJson.Type() == json.NullJSONType) {
