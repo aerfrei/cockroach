@@ -194,6 +194,7 @@ type beforeAfterValidator struct {
 	fullTableName  bool
 	keyInValue     bool
 	diff           bool
+	mvccTimestamp  bool
 
 	failures []string
 }
@@ -215,6 +216,7 @@ func NewBeforeAfterValidator(
 		fullTableName:  option.FullTableName,
 		keyInValue:     option.KeyInValue,
 		diff:           option.Diff,
+		mvccTimestamp:  option.MVCCTimestamp,
 		primaryKeyCols: primaryKeyCols,
 		resolved:       make(map[string]hlc.Timestamp),
 	}, nil
@@ -288,6 +290,27 @@ func (v *beforeAfterValidator) NoteRow(
 	// updated timestamp.
 	if err := v.checkRowAt("after", keyJSONAsArray, afterJSON, updated); err != nil {
 		return err
+	}
+
+	if v.mvccTimestamp {
+		mvccJSON, err := valueJSON.FetchValKey("mvcc_timestamp")
+		if err != nil {
+			return err
+		}
+		if mvccJSON == nil {
+			return errors.Errorf(`expected MVCC timestampt, got nil`)
+		}
+		mvccJSONText, err := mvccJSON.AsText()
+		if err != nil {
+			return err
+		}
+
+		if *mvccJSONText > updated.AsOfSystemTime() {
+			fmt.Println(valueJSON.String())
+			return errors.Errorf(
+				`expected MVCC timestampt to match updated timestamp (%s), got %s`,
+				updated.AsOfSystemTime(), mvccJSONText)
+		}
 	}
 
 	if !v.diff {

@@ -24,6 +24,7 @@ type ChangefeedOption struct {
 	Format        string
 	KeyInValue    bool
 	Diff          bool
+	MVCCTimestamp bool
 }
 
 func newChangefeedOption(sinkType string) ChangefeedOption {
@@ -36,9 +37,10 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 		// the key in the value is extracted and removed from the test feed
 		// messages (see extractKeyFromJSONValue function).
 		// TODO: enable testing key_in_value for cloudstorage and webhook sinks
-		KeyInValue: !isCloudstorage && !isWebhook && rand.Intn(2) < 1,
-		Format:     "json",
-		Diff:       rand.Intn(2) < 1,
+		KeyInValue:    !isCloudstorage && !isWebhook && rand.Intn(2) < 1,
+		Format:        "json",
+		Diff:          rand.Intn(2) < 1,
+		MVCCTimestamp: rand.Intn(2) < 1,
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
@@ -66,6 +68,9 @@ func (cfo ChangefeedOption) OptionString() string {
 	}
 	if cfo.KeyInValue {
 		options = options + ", key_in_value"
+	}
+	if cfo.MVCCTimestamp {
+		options = options + ", mvcc_timestamp"
 	}
 	return options
 }
