@@ -24,9 +24,12 @@ type ChangefeedOption struct {
 	Format        string
 	KeyInValue    bool
 	Diff          bool
+	Updated       bool
+	Resolved      bool
+	InitialScan   string
 }
 
-func newChangefeedOption(sinkType string) ChangefeedOption {
+func newChangefeedOption(sinkType string, nOp NemesesOption) ChangefeedOption {
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
 	cfo := ChangefeedOption{
@@ -36,30 +39,58 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 		// the key in the value is extracted and removed from the test feed
 		// messages (see extractKeyFromJSONValue function).
 		// TODO: enable testing key_in_value for cloudstorage and webhook sinks
-		KeyInValue: !isCloudstorage && !isWebhook && rand.Intn(2) < 1,
-		Format:     "json",
-		Diff:       rand.Intn(2) < 1,
+		KeyInValue:  !isCloudstorage && !isWebhook && rand.Intn(2) < 1,
+		Format:      "json",
+		Diff:        rand.Intn(2) < 1,
+		InitialScan: "yes",
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
 		cfo.Format = "parquet"
 	}
 
+	//if !nOp.EnableFpValidator && rand.Intn(2) < 1 {
+	//	if rand.Intn(2) < 1 {
+	//		cfo.InitialScan = "only"
+	//	} else {
+	//		cfo.InitialScan = "no"
+	//	}
+	//}
+
+	//cfo.InitialScan = "only"
+	//cfo.Updated = false
+	//cfo.Resolved = false
+	//cfo.Diff = false
+
+	cfo.InitialScan = "no"
+	cfo.Updated = true
+	cfo.Resolved = true
+	cfo.Diff = true
+
 	return cfo
 }
 
 func (co ChangefeedOption) String() string {
-	return fmt.Sprintf("full_table_name=%t,key_in_value=%t,format=%s",
-		co.FullTableName, co.KeyInValue, co.Format)
+	return fmt.Sprintf("full_table_name=%t,key_in_value=%t,format=%s,diff=%t,initial_scan='%s'",
+		co.FullTableName, co.KeyInValue, co.Format, co.Diff, co.InitialScan)
 }
 
 func (cfo ChangefeedOption) OptionString() string {
-	options := ""
+	options := " initial_scan='no'"
 	if cfo.Diff {
 		options = options + ", diff"
 	}
-	if cfo.Format == "parquet" {
-		options = options + ", format=parquet"
+	if cfo.Updated {
+		options = options + ", updated"
+	}
+	if cfo.Resolved {
+		options = options + ", resolved"
+	}
+	if cfo.InitialScan != "" {
+		options = options + fmt.Sprintf(`, initial_scan='%s'`, cfo.InitialScan)
+	}
+	if cfo.Format != "" {
+		options = options + ", format=" + cfo.Format
 	}
 	if cfo.FullTableName {
 		options = options + ", full_table_name"
@@ -76,14 +107,14 @@ type NemesesOption struct {
 }
 
 var NemesesOptions = []NemesesOption{
-	{
-		EnableFpValidator: true,
-		EnableSQLSmith:    false,
-	},
-	{
-		EnableFpValidator: false,
-		EnableSQLSmith:    true,
-	},
+	//{
+	//	EnableFpValidator: true,
+	//	EnableSQLSmith:    false,
+	//},
+	//{
+	//	EnableFpValidator: false,
+	//	EnableSQLSmith:    true,
+	//},
 	{
 		EnableFpValidator: false,
 		EnableSQLSmith:    false,
@@ -257,10 +288,10 @@ func RunNemesis(
 		}
 	}
 
-	cfo := newChangefeedOption(testName)
+	cfo := newChangefeedOption(testName, nOp)
 	log.Infof(ctx, "Using changefeed options: %s", cfo.String())
 	foo, err := f.Feed(fmt.Sprintf(
-		`CREATE CHANGEFEED FOR foo WITH updated, resolved%s`,
+		`CREATE CHANGEFEED FOR foo WITH%s`,
 		cfo.OptionString(),
 	))
 	if err != nil {

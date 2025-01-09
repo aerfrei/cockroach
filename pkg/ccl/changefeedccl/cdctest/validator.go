@@ -286,9 +286,11 @@ func (v *beforeAfterValidator) NoteRow(
 
 	// Check that the "after" field agrees with the row in the table at the
 	// updated timestamp.
+	fmt.Println("gonna check")
 	if err := v.checkRowAt("after", keyJSONAsArray, afterJSON, updated); err != nil {
 		return err
 	}
+	fmt.Println("checked")
 
 	if !v.diff {
 		// If the diff option is not specified in the change feed,
@@ -368,14 +370,18 @@ func (v *beforeAfterValidator) checkRowAt(
 
 	var valid bool
 	stmt := stmtBuf.String()
+	fmt.Println("stmt", stmt)
 	if err := v.sqlDB.QueryRow(stmt, args...).Scan(&valid); err != nil {
+		fmt.Println("fail1")
 		return errors.Wrapf(err, "while executing %s", stmt)
 	}
 	if !valid {
+		fmt.Println("fail12")
 		v.failures = append(v.failures, fmt.Sprintf(
 			"%q field did not agree with row at %s: %s %v",
 			field, ts.AsOfSystemTime(), stmt, args))
 	}
+	fmt.Println("success")
 	return nil
 }
 
