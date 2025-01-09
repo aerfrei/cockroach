@@ -20,15 +20,21 @@ import (
 )
 
 type ChangefeedOption struct {
-	FullTableName bool
-	Format        string
-	KeyInValue    bool
-	Diff          bool
+	FullTableName     bool
+	Format            string
+	KeyInValue        bool
+	Diff              bool
+	KafkaSinkConfig   string
+	PubsubSinkConfig  string
+	WebhookSinkConfig string
 }
 
 func newChangefeedOption(sinkType string) ChangefeedOption {
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
+	isKafka := strings.Contains(sinkType, "kafka")
+	isPubsub := strings.Contains(sinkType, "pubsub")
+
 	cfo := ChangefeedOption{
 		FullTableName: rand.Intn(2) < 1,
 
@@ -43,6 +49,17 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 
 	if isCloudstorage && rand.Intn(2) < 1 {
 		cfo.Format = "parquet"
+	}
+
+	if isKafka && rand.Intn(2) < 1 {
+		cfo.KafkaSinkConfig =
+			`'{"Flush": {"MaxMessages": 100, "Frequency": "1s","Messages": 100 }, "Version": "2.7.2", "RequiredAcks": "ALL","Compression": "GZIP"}'`
+	}
+	if isPubsub && rand.Intn(2) < 1 {
+		cfo.PubsubSinkConfig = "'{\"Flush\": {\"Frequency\": \"100ms\"}}'"
+	}
+	if isWebhook {
+		cfo.WebhookSinkConfig = `'{"Flush": {"Messages": 1, "Frequency": "1ms"}}'`
 	}
 
 	return cfo
@@ -66,6 +83,15 @@ func (cfo ChangefeedOption) OptionString() string {
 	}
 	if cfo.KeyInValue {
 		options = options + ", key_in_value"
+	}
+	if cfo.KafkaSinkConfig != "" {
+		options = options + fmt.Sprintf(`, kafka_sink_config=%s`, cfo.KafkaSinkConfig)
+	}
+	if cfo.WebhookSinkConfig != "" {
+		options = options + fmt.Sprintf(`, webhook_sink_config=%s`, cfo.WebhookSinkConfig)
+	}
+	if cfo.PubsubSinkConfig != "" {
+		options = options + fmt.Sprintf(`, pubsub_sink_config=%s`, cfo.PubsubSinkConfig)
 	}
 	return options
 }
