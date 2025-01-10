@@ -221,7 +221,6 @@ func (v *beforeAfterValidator) NoteRow(
 	partition, key, value string, updated hlc.Timestamp, topic string,
 ) error {
 	diff := v.changeFeedOption.BooleanOptions["diff"]
-	mvccTimestamp := v.changeFeedOption.BooleanOptions["mvcc_timestamp"]
 
 	keyJSON, err := json.ParseJSON(key)
 	if err != nil {
@@ -253,27 +252,6 @@ func (v *beforeAfterValidator) NoteRow(
 	// updated timestamp.
 	if err := v.checkRowAt("after", keyJSONAsArray, afterJSON, updated); err != nil {
 		return err
-	}
-
-	if mvccTimestamp {
-		mvccJSON, err := valueJSON.FetchValKey("mvcc_timestamp")
-		if err != nil {
-			return err
-		}
-		if mvccJSON == nil {
-			return errors.Errorf(`expected MVCC timestampt, got nil`)
-		}
-		mvccJSONText, err := mvccJSON.AsText()
-		if err != nil {
-			return err
-		}
-
-		if *mvccJSONText > updated.AsOfSystemTime() {
-			fmt.Println(valueJSON.String())
-			return errors.Errorf(
-				`expected MVCC timestampt to match updated timestamp (%s), got %s`,
-				updated.AsOfSystemTime(), mvccJSONText)
-		}
 	}
 
 	if !diff {
@@ -379,19 +357,66 @@ func (v *beforeAfterValidator) Failures() []string {
 	return v.failures
 }
 
-type keyInValueValidator struct {
-	sqlDB            *gosql.DB
-	table            string
-	primaryKeyCols   []string
-	resolved         map[string]hlc.Timestamp
-	changeFeedOption ChangefeedOption
-
+type mvccTimestampValidator struct {
 	failures []string
 }
 
-// NewKeyInValueValidator returns a Validator verifies that the emitted row
-// includes the key inside a field named "key" inside the value. Used only when
-// key_in_value is specified in the changefeed.
+// NewMvccTimestampValidator returns a Validator that verifies that the emitted
+// row includes the mvcc_timestamp field and that its value is not later than
+// the updated timestamp
+func NewMvccTimestampValidator() Validator {
+	return &mvccTimestampValidator{}
+}
+
+// NoteRow implements the Validator interface.
+func (v *mvccTimestampValidator) NoteRow(
+	partition, key, value string, updated hlc.Timestamp, topic string,
+) error {
+	valueJSON, err := json.ParseJSON(value)
+	if err != nil {
+		return err
+	}
+
+	mvccJSON, err := valueJSON.FetchValKey("mvcc_timestamp")
+	if err != nil {
+		return err
+	}
+	if mvccJSON == nil {
+		return errors.Errorf(`expected MVCC timestampt, got nil`)
+	}
+	mvccJSONText, err := mvccJSON.AsText()
+	if err != nil {
+		return err
+	}
+
+	if *mvccJSONText > updated.AsOfSystemTime() {
+		fmt.Println(valueJSON.String())
+		return errors.Errorf(
+			`expected MVCC timestampt to match updated timestamp (%s), got %s`,
+			updated.AsOfSystemTime(), mvccJSONText)
+	}
+
+	return nil
+}
+
+// NoteResolved implements the Validator interface.
+func (v *mvccTimestampValidator) NoteResolved(partition string, resolved hlc.Timestamp) error {
+	return nil
+}
+
+// Failures implements the Validator interface.
+func (v *mvccTimestampValidator) Failures() []string {
+	return v.failures
+}
+
+type keyInValueValidator struct {
+	primaryKeyCols []string
+	failures       []string
+}
+
+// NewKeyInValueValidator returns a Validator that verifies that the emitted row
+// includes the key inside a field named "key" inside the value. It should be
+// used only when key_in_value is specified in the changefeed.
 func NewKeyInValueValidator(sqlDB *gosql.DB, table string) (Validator, error) {
 	primaryKeyCols, err := fetchPrimaryKeyCols(sqlDB, table)
 	if err != nil {
@@ -399,10 +424,7 @@ func NewKeyInValueValidator(sqlDB *gosql.DB, table string) (Validator, error) {
 	}
 
 	return &keyInValueValidator{
-		sqlDB:          sqlDB,
-		table:          table,
 		primaryKeyCols: primaryKeyCols,
-		resolved:       make(map[string]hlc.Timestamp),
 	}, nil
 }
 
@@ -458,38 +480,27 @@ func (v *keyInValueValidator) Failures() []string {
 }
 
 type topicValidator struct {
-	sqlDB            *gosql.DB
-	table            string
-	primaryKeyCols   []string
-	resolved         map[string]hlc.Timestamp
-	changeFeedOption ChangefeedOption
+	table         string
+	fullTableName bool
 
 	failures []string
 }
 
-// NewTopicValidator returns a Validator verifies that the topic field of the
-// row agrees with the name of the table. In the case the full_table_name
+// NewTopicValidator returns a Validator that verifies that the topic field of
+// the row agrees with the name of the table. In the case the full_table_name
 // option is specified, it checks the topic includes the db and schema name.
-func NewTopicValidator(sqlDB *gosql.DB, table string, option ChangefeedOption) (Validator, error) {
-	primaryKeyCols, err := fetchPrimaryKeyCols(sqlDB, table)
-	if err != nil {
-		return nil, errors.Wrap(err, "fetchPrimaryKeyCols failed")
-	}
-
+func NewTopicValidator(table string, fullTableName bool) Validator {
 	return &topicValidator{
-		sqlDB:            sqlDB,
-		table:            table,
-		changeFeedOption: option,
-		primaryKeyCols:   primaryKeyCols,
-		resolved:         make(map[string]hlc.Timestamp),
-	}, nil
+		table:         table,
+		fullTableName: fullTableName,
+	}
 }
 
 // NoteRow implements the Validator interface.
 func (v *topicValidator) NoteRow(
 	partition, key, value string, updated hlc.Timestamp, topic string,
 ) error {
-	fullTableName := v.changeFeedOption.BooleanOptions["full_table_name"]
+	fullTableName := v.fullTableName
 
 	if fullTableName {
 		// TODO: fetch the actual database and schema name for the full table name

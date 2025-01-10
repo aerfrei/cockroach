@@ -295,10 +295,7 @@ func RunNemesis(
 		return nil, err
 	}
 
-	tV, err := NewTopicValidator(db, `foo`, cfo)
-	if err != nil {
-		return nil, err
-	}
+	tV := NewTopicValidator(`foo`, cfo.BooleanOptions["full_table_name"])
 
 	validators := Validators{
 		NewOrderValidator(`foo`),
@@ -320,6 +317,11 @@ func RunNemesis(
 			return nil, err
 		}
 		validators = append(validators, kivV)
+	}
+
+	if cfo.BooleanOptions["mvcc_timestamp"] {
+		mvccV := NewMvccTimestampValidator()
+		validators = append(validators, mvccV)
 	}
 
 	ns.v = NewCountValidator(validators)
