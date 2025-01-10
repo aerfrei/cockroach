@@ -314,6 +314,14 @@ func RunNemesis(
 		validators = append(validators, fprintV)
 	}
 
+	if cfo.BooleanOptions["key_in_value"] {
+		kivV, err := NewKeyInValueValidator(db, `foo`)
+		if err != nil {
+			return nil, err
+		}
+		validators = append(validators, kivV)
+	}
+
 	ns.v = NewCountValidator(validators)
 
 	// Initialize the actual row count, overwriting what the initialization loop did. That

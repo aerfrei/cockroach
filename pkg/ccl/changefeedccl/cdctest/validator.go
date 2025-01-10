@@ -220,25 +220,9 @@ func NewBeforeAfterValidator(
 func (v *beforeAfterValidator) NoteRow(
 	partition, key, value string, updated hlc.Timestamp, topic string,
 ) error {
-	fullTableName := v.changeFeedOption.BooleanOptions["full_table_name"]
-	keyInValue := v.changeFeedOption.BooleanOptions["key_in_value"]
 	diff := v.changeFeedOption.BooleanOptions["diff"]
 	mvccTimestamp := v.changeFeedOption.BooleanOptions["mvcc_timestamp"]
 
-	if fullTableName {
-		// TODO: fetch the actual database and schema name for the full table name
-		if topic != fmt.Sprintf(`d.public.%s`, v.table) {
-			v.failures = append(v.failures, fmt.Sprintf(
-				"topic %s does not match expected table d.public.%s", topic, v.table,
-			))
-		}
-	} else {
-		if topic != v.table {
-			v.failures = append(v.failures, fmt.Sprintf(
-				"topic %s does not match expected table %s", topic, v.table,
-			))
-		}
-	}
 	keyJSON, err := json.ParseJSON(key)
 	if err != nil {
 		return err
@@ -253,26 +237,6 @@ func (v *beforeAfterValidator) NoteRow(
 	valueJSON, err := json.ParseJSON(value)
 	if err != nil {
 		return err
-	}
-
-	if keyInValue {
-		keyString := keyJSON.String()
-		keyInValueJSON, err := valueJSON.FetchValKey("key")
-		if err != nil {
-			return err
-		}
-
-		if keyInValueJSON == nil {
-			v.failures = append(v.failures, fmt.Sprintf(
-				"no key in value, expected key value %s", keyString))
-		} else {
-			keyInValueString := keyInValueJSON.String()
-			if keyInValueString != keyString {
-				v.failures = append(v.failures, fmt.Sprintf(
-					"key in value %s does not match expected key value %s",
-					keyInValueString, keyString))
-			}
-		}
 	}
 
 	afterJSON, err := valueJSON.FetchValKey("after")
@@ -412,6 +376,84 @@ func (v *beforeAfterValidator) NoteResolved(partition string, resolved hlc.Times
 
 // Failures implements the Validator interface.
 func (v *beforeAfterValidator) Failures() []string {
+	return v.failures
+}
+
+type keyInValueValidator struct {
+	sqlDB            *gosql.DB
+	table            string
+	primaryKeyCols   []string
+	resolved         map[string]hlc.Timestamp
+	changeFeedOption ChangefeedOption
+
+	failures []string
+}
+
+// NewKeyInValueValidator returns a Validator verifies that the emitted row
+// includes the key inside a field named "key" inside the value. Used only when
+// key_in_value is specified in the changefeed.
+func NewKeyInValueValidator(sqlDB *gosql.DB, table string) (Validator, error) {
+	primaryKeyCols, err := fetchPrimaryKeyCols(sqlDB, table)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetchPrimaryKeyCols failed")
+	}
+
+	return &keyInValueValidator{
+		sqlDB:          sqlDB,
+		table:          table,
+		primaryKeyCols: primaryKeyCols,
+		resolved:       make(map[string]hlc.Timestamp),
+	}, nil
+}
+
+// NoteRow implements the Validator interface.
+func (v *keyInValueValidator) NoteRow(
+	partition, key, value string, updated hlc.Timestamp, topic string,
+) error {
+	keyJSON, err := json.ParseJSON(key)
+	if err != nil {
+		return err
+	}
+	keyJSONAsArray, notArray := keyJSON.AsArray()
+	if !notArray || len(keyJSONAsArray) != len(v.primaryKeyCols) {
+		return errors.Errorf(
+			`notArray: %t expected primary key columns %s got datums %s`,
+			notArray, v.primaryKeyCols, keyJSONAsArray)
+	}
+
+	valueJSON, err := json.ParseJSON(value)
+	if err != nil {
+		return err
+	}
+
+	keyString := keyJSON.String()
+	keyInValueJSON, err := valueJSON.FetchValKey("key")
+	if err != nil {
+		return err
+	}
+
+	if keyInValueJSON == nil {
+		v.failures = append(v.failures, fmt.Sprintf(
+			"no key in value, expected key value %s", keyString))
+	} else {
+		keyInValueString := keyInValueJSON.String()
+		if keyInValueString != keyString {
+			v.failures = append(v.failures, fmt.Sprintf(
+				"key in value %s does not match expected key value %s",
+				keyInValueString, keyString))
+		}
+	}
+
+	return nil
+}
+
+// NoteResolved implements the Validator interface.
+func (v *keyInValueValidator) NoteResolved(partition string, resolved hlc.Timestamp) error {
+	return nil
+}
+
+// Failures implements the Validator interface.
+func (v *keyInValueValidator) Failures() []string {
 	return v.failures
 }
 
