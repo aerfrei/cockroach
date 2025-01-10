@@ -20,57 +20,64 @@ import (
 )
 
 type ChangefeedOption struct {
-	FullTableName bool
-	Format        string
-	KeyInValue    bool
-	Diff          bool
-	MVCCTimestamp bool
+	Format         string
+	BooleanOptions map[string]bool
 }
 
 func newChangefeedOption(sinkType string) ChangefeedOption {
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
-	cfo := ChangefeedOption{
-		FullTableName: rand.Intn(2) < 1,
 
+	booleanOptionEligibility := map[string]bool{
+		"full_table_name": true,
 		// Because key_in_value is on by default for cloudstorage and webhook sinks,
 		// the key in the value is extracted and removed from the test feed
 		// messages (see extractKeyFromJSONValue function).
 		// TODO: enable testing key_in_value for cloudstorage and webhook sinks
-		KeyInValue:    !isCloudstorage && !isWebhook && rand.Intn(2) < 1,
-		Format:        "json",
-		Diff:          rand.Intn(2) < 1,
-		MVCCTimestamp: rand.Intn(2) < 1,
+		"key_in_value":   !isCloudstorage && !isWebhook,
+		"diff":           true,
+		"mvcc_timestamp": true,
+	}
+
+	cfo := ChangefeedOption{}
+
+	cfo.BooleanOptions = make(map[string]bool)
+	for option, eligible := range booleanOptionEligibility {
+		if eligible {
+			cfo.BooleanOptions[option] = rand.Intn(2) < 1
+		}
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
 		cfo.Format = "parquet"
+	} else {
+		cfo.Format = "json"
 	}
 
 	return cfo
 }
 
+// String returns a string representation of the ChangefeedOption
 func (co ChangefeedOption) String() string {
-	return fmt.Sprintf("full_table_name=%t,key_in_value=%t,format=%s",
-		co.FullTableName, co.KeyInValue, co.Format)
+	options := []string{}
+	for option, value := range co.BooleanOptions {
+		if value {
+			options = append(options, option)
+		}
+	}
+	return fmt.Sprintf("options=%s;format=%s", strings.Join(options, ","), co.Format)
 }
 
+// OptionString returns a string of the options set in ChangefeedOption
 func (cfo ChangefeedOption) OptionString() string {
 	options := ""
-	if cfo.Diff {
-		options = options + ", diff"
+	for option, value := range cfo.BooleanOptions {
+		if value {
+			options = options + ", " + option
+		}
 	}
 	if cfo.Format == "parquet" {
 		options = options + ", format=parquet"
-	}
-	if cfo.FullTableName {
-		options = options + ", full_table_name"
-	}
-	if cfo.KeyInValue {
-		options = options + ", key_in_value"
-	}
-	if cfo.MVCCTimestamp {
-		options = options + ", mvcc_timestamp"
 	}
 	return options
 }

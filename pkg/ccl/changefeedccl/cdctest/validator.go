@@ -187,14 +187,11 @@ func (v *orderValidator) Failures() []string {
 }
 
 type beforeAfterValidator struct {
-	sqlDB          *gosql.DB
-	table          string
-	primaryKeyCols []string
-	resolved       map[string]hlc.Timestamp
-	fullTableName  bool
-	keyInValue     bool
-	diff           bool
-	mvccTimestamp  bool
+	sqlDB            *gosql.DB
+	table            string
+	primaryKeyCols   []string
+	resolved         map[string]hlc.Timestamp
+	changeFeedOption ChangefeedOption
 
 	failures []string
 }
@@ -211,14 +208,11 @@ func NewBeforeAfterValidator(
 	}
 
 	return &beforeAfterValidator{
-		sqlDB:          sqlDB,
-		table:          table,
-		fullTableName:  option.FullTableName,
-		keyInValue:     option.KeyInValue,
-		diff:           option.Diff,
-		mvccTimestamp:  option.MVCCTimestamp,
-		primaryKeyCols: primaryKeyCols,
-		resolved:       make(map[string]hlc.Timestamp),
+		sqlDB:            sqlDB,
+		table:            table,
+		changeFeedOption: option,
+		primaryKeyCols:   primaryKeyCols,
+		resolved:         make(map[string]hlc.Timestamp),
 	}, nil
 }
 
@@ -226,7 +220,12 @@ func NewBeforeAfterValidator(
 func (v *beforeAfterValidator) NoteRow(
 	partition, key, value string, updated hlc.Timestamp, topic string,
 ) error {
-	if v.fullTableName {
+	fullTableName := v.changeFeedOption.BooleanOptions["full_table_name"]
+	keyInValue := v.changeFeedOption.BooleanOptions["key_in_value"]
+	diff := v.changeFeedOption.BooleanOptions["diff"]
+	mvccTimestamp := v.changeFeedOption.BooleanOptions["mvcc_timestamp"]
+
+	if fullTableName {
 		// TODO: fetch the actual database and schema name for the full table name
 		if topic != fmt.Sprintf(`d.public.%s`, v.table) {
 			v.failures = append(v.failures, fmt.Sprintf(
@@ -256,7 +255,7 @@ func (v *beforeAfterValidator) NoteRow(
 		return err
 	}
 
-	if v.keyInValue {
+	if keyInValue {
 		keyString := keyJSON.String()
 		keyInValueJSON, err := valueJSON.FetchValKey("key")
 		if err != nil {
@@ -292,7 +291,7 @@ func (v *beforeAfterValidator) NoteRow(
 		return err
 	}
 
-	if v.mvccTimestamp {
+	if mvccTimestamp {
 		mvccJSON, err := valueJSON.FetchValKey("mvcc_timestamp")
 		if err != nil {
 			return err
@@ -313,7 +312,7 @@ func (v *beforeAfterValidator) NoteRow(
 		}
 	}
 
-	if !v.diff {
+	if !diff {
 		// If the diff option is not specified in the change feed,
 		// we don't expect the rows to contain a "before" field.
 		if beforeJson != nil {
