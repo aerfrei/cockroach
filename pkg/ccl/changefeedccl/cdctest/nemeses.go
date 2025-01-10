@@ -295,9 +295,15 @@ func RunNemesis(
 		return nil, err
 	}
 
+	tV, err := NewTopicValidator(db, `foo`, cfo)
+	if err != nil {
+		return nil, err
+	}
+
 	validators := Validators{
 		NewOrderValidator(`foo`),
 		baV,
+		tV,
 	}
 
 	if nOp.EnableFpValidator {

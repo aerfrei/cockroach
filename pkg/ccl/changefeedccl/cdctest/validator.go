@@ -415,6 +415,67 @@ func (v *beforeAfterValidator) Failures() []string {
 	return v.failures
 }
 
+type topicValidator struct {
+	sqlDB            *gosql.DB
+	table            string
+	primaryKeyCols   []string
+	resolved         map[string]hlc.Timestamp
+	changeFeedOption ChangefeedOption
+
+	failures []string
+}
+
+// NewTopicValidator returns a Validator verifies that the topic field of the
+// row agrees with the name of the table. In the case the full_table_name
+// option is specified, it checks the topic includes the db and schema name.
+func NewTopicValidator(sqlDB *gosql.DB, table string, option ChangefeedOption) (Validator, error) {
+	primaryKeyCols, err := fetchPrimaryKeyCols(sqlDB, table)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetchPrimaryKeyCols failed")
+	}
+
+	return &topicValidator{
+		sqlDB:            sqlDB,
+		table:            table,
+		changeFeedOption: option,
+		primaryKeyCols:   primaryKeyCols,
+		resolved:         make(map[string]hlc.Timestamp),
+	}, nil
+}
+
+// NoteRow implements the Validator interface.
+func (v *topicValidator) NoteRow(
+	partition, key, value string, updated hlc.Timestamp, topic string,
+) error {
+	fullTableName := v.changeFeedOption.BooleanOptions["full_table_name"]
+
+	if fullTableName {
+		// TODO: fetch the actual database and schema name for the full table name
+		if topic != fmt.Sprintf(`d.public.%s`, v.table) {
+			return errors.Errorf(
+				"topic %s does not match expected table d.public.%s", topic, v.table,
+			)
+		}
+	} else {
+		if topic != v.table {
+			return errors.Errorf(
+				"topic %s does not match expected table %s", topic, v.table,
+			)
+		}
+	}
+	return nil
+}
+
+// NoteResolved implements the Validator interface.
+func (v *topicValidator) NoteResolved(partition string, resolved hlc.Timestamp) error {
+	return nil
+}
+
+// Failures implements the Validator interface.
+func (v *topicValidator) Failures() []string {
+	return v.failures
+}
+
 type validatorRow struct {
 	key, value string
 	updated    hlc.Timestamp
