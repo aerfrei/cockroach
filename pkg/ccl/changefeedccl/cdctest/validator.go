@@ -451,14 +451,14 @@ func (v *keyInValueValidator) NoteRow(
 	}
 
 	if keyInValueJSON == nil {
-		v.failures = append(v.failures, fmt.Sprintf(
-			"no key in value, expected key value %s", keyString))
+		return errors.Errorf(
+			"no key in value, expected key value %s", keyString)
 	} else {
 		keyInValueString := keyInValueJSON.String()
 		if keyInValueString != keyString {
-			v.failures = append(v.failures, fmt.Sprintf(
+			return errors.Errorf(
 				"key in value %s does not match expected key value %s",
-				keyInValueString, keyString))
+				keyInValueString, keyString)
 		}
 	}
 
