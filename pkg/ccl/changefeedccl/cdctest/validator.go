@@ -187,11 +187,11 @@ func (v *orderValidator) Failures() []string {
 }
 
 type beforeAfterValidator struct {
-	sqlDB            *gosql.DB
-	table            string
-	primaryKeyCols   []string
-	resolved         map[string]hlc.Timestamp
-	changeFeedOption ChangefeedOption
+	sqlDB          *gosql.DB
+	table          string
+	primaryKeyCols []string
+	resolved       map[string]hlc.Timestamp
+	diff           bool
 
 	failures []string
 }
@@ -199,20 +199,18 @@ type beforeAfterValidator struct {
 // NewBeforeAfterValidator returns a Validator verifies that the "before" and
 // "after" fields in each row agree with the source table when performing AS OF
 // SYSTEM TIME lookups before and at the row's timestamp.
-func NewBeforeAfterValidator(
-	sqlDB *gosql.DB, table string, option ChangefeedOption,
-) (Validator, error) {
+func NewBeforeAfterValidator(sqlDB *gosql.DB, table string, diff bool) (Validator, error) {
 	primaryKeyCols, err := fetchPrimaryKeyCols(sqlDB, table)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetchPrimaryKeyCols failed")
 	}
 
 	return &beforeAfterValidator{
-		sqlDB:            sqlDB,
-		table:            table,
-		changeFeedOption: option,
-		primaryKeyCols:   primaryKeyCols,
-		resolved:         make(map[string]hlc.Timestamp),
+		sqlDB:          sqlDB,
+		table:          table,
+		diff:           diff,
+		primaryKeyCols: primaryKeyCols,
+		resolved:       make(map[string]hlc.Timestamp),
 	}, nil
 }
 
@@ -220,8 +218,6 @@ func NewBeforeAfterValidator(
 func (v *beforeAfterValidator) NoteRow(
 	partition, key, value string, updated hlc.Timestamp, topic string,
 ) error {
-	diff := v.changeFeedOption.BooleanOptions["diff"]
-
 	keyJSON, err := json.ParseJSON(key)
 	if err != nil {
 		return err
@@ -254,7 +250,7 @@ func (v *beforeAfterValidator) NoteRow(
 		return err
 	}
 
-	if !diff {
+	if !v.diff {
 		// If the diff option is not specified in the change feed,
 		// we don't expect the rows to contain a "before" field.
 		if beforeJson != nil {

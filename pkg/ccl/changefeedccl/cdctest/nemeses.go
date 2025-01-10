@@ -290,7 +290,7 @@ func RunNemesis(
 		return nil, err
 	}
 
-	baV, err := NewBeforeAfterValidator(db, `foo`, cfo)
+	baV, err := NewBeforeAfterValidator(db, `foo`, cfo.BooleanOptions["diff"])
 	if err != nil {
 		return nil, err
 	}
