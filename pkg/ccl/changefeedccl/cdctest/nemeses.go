@@ -28,6 +28,8 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
 
+	cfo := ChangefeedOption{}
+
 	booleanOptionEligibility := map[string]bool{
 		"full_table_name": true,
 		// Because key_in_value is on by default for cloudstorage and webhook sinks,
@@ -38,8 +40,6 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 		"diff":           true,
 		"mvcc_timestamp": true,
 	}
-
-	cfo := ChangefeedOption{}
 
 	cfo.BooleanOptions = make(map[string]bool)
 	for option, eligible := range booleanOptionEligibility {
@@ -57,7 +57,6 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 	return cfo
 }
 
-// String returns a string representation of the ChangefeedOption
 func (co ChangefeedOption) String() string {
 	options := []string{}
 	for option, value := range co.BooleanOptions {
@@ -68,7 +67,6 @@ func (co ChangefeedOption) String() string {
 	return fmt.Sprintf("options=%s;format=%s", strings.Join(options, ","), co.Format)
 }
 
-// OptionString returns a string of the options set in ChangefeedOption
 func (cfo ChangefeedOption) OptionString() string {
 	options := ""
 	for option, value := range cfo.BooleanOptions {
@@ -95,10 +93,6 @@ var NemesesOptions = []NemesesOption{
 	{
 		EnableFpValidator: false,
 		EnableSQLSmith:    true,
-	},
-	{
-		EnableFpValidator: false,
-		EnableSQLSmith:    false,
 	},
 }
 
