@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	gosql "database/sql"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -20,15 +21,89 @@ import (
 )
 
 type ChangefeedOption struct {
-	Format         string
-	BooleanOptions map[string]bool
+	Format            string
+	WebhookSinkConfig string
+	BooleanOptions    map[string]bool
+}
+
+type SinkConfig struct {
+	Flush map[string]any
+	Retry map[string]any
+}
+
+func (sk SinkConfig) OptionString() string {
+	nonEmptyConfig := make(map[string]map[string]any)
+
+	if len(sk.Flush) > 0 {
+		nonEmptyConfig["Flush"] = sk.Flush
+	}
+	if len(sk.Retry) > 0 {
+		nonEmptyConfig["Retry"] = sk.Retry
+	}
+
+	jsonData, err := json.Marshal(nonEmptyConfig)
+	if err != nil {
+		return ""
+	}
+
+	// This presents an issue. Seemingly anything with frequency set
+	// seems to cause tests to hang and fp validator to fail.
+	// This is true if freq = 500ms (hanging and failing)
+	// Also 100ms
+	// return "{\"Flush\":{\"Frequency\":\"5s\",\"Bytes\":0,\"Messages\":100}}"
+	return string(jsonData)
+}
+
+func newSinkConfig() SinkConfig {
+	flush := make(map[string]any)
+	nonZeroInterval := "500ms"
+
+	if rand.Intn(2) < 1 {
+		// Setting either Messages or Bytes with a non-zero value without setting
+		// Frequency is an invalid configuration. We set Frequency to a non-zero
+		// interval here but can reset it later.
+		flush["Messages"] = rand.Intn(10) + 1
+		flush["Frequency"] = nonZeroInterval
+	}
+	if rand.Intn(2) < 1 {
+		flush["Bytes"] = rand.Intn(1000) + 1
+		flush["Frequency"] = nonZeroInterval
+	}
+	if rand.Intn(2) < 1 {
+		intervals := []string{"100ms", "500ms", "1s", "5s"}
+		interval := intervals[rand.Intn(len(intervals))]
+		flush["Frequency"] = interval
+	}
+
+	flush["Frequency"] = "100ms"
+
+	retry := make(map[string]any)
+	if rand.Intn(2) < 1 {
+		if rand.Intn(2) < 1 {
+			retry["Max"] = "inf"
+		} else {
+			retry["Max"] = rand.Intn(5) + 1
+		}
+	}
+	if rand.Intn(2) < 1 {
+		intervals := []string{"100ms", "500ms", "1s", "5s"}
+		interval := intervals[rand.Intn(len(intervals))]
+		retry["Backoff"] = interval
+	}
+
+	sinkConfig := SinkConfig{}
+	if len(flush) > 0 {
+		sinkConfig.Flush = flush
+	}
+	if len(retry) > 0 {
+		sinkConfig.Retry = retry
+	}
+	return sinkConfig
 }
 
 func newChangefeedOption(sinkType string) ChangefeedOption {
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
-
-	cfo := ChangefeedOption{}
 
 	booleanOptionEligibility := map[string]bool{
 		"full_table_name": true,
@@ -41,11 +116,15 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 		"mvcc_timestamp": true,
 	}
 
+	cfo := ChangefeedOption{}
 	cfo.BooleanOptions = make(map[string]bool)
 	for option, eligible := range booleanOptionEligibility {
-		if eligible {
-			cfo.BooleanOptions[option] = rand.Intn(2) < 1
-		}
+		cfo.BooleanOptions[option] = eligible && rand.Intn(2) < 1
+	}
+
+	// hangs
+	if isWebhook {
+		cfo.WebhookSinkConfig = newSinkConfig().OptionString()
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
@@ -57,16 +136,6 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 	return cfo
 }
 
-func (co ChangefeedOption) String() string {
-	options := []string{}
-	for option, value := range co.BooleanOptions {
-		if value {
-			options = append(options, option)
-		}
-	}
-	return fmt.Sprintf("options=%s;format=%s", strings.Join(options, ","), co.Format)
-}
-
 func (cfo ChangefeedOption) OptionString() string {
 	options := ""
 	for option, value := range cfo.BooleanOptions {
@@ -76,6 +145,9 @@ func (cfo ChangefeedOption) OptionString() string {
 	}
 	if cfo.Format == "parquet" {
 		options = options + ", format=parquet"
+	}
+	if cfo.WebhookSinkConfig != "" {
+		options = options + fmt.Sprintf(", webhook_sink_config='%s'", cfo.WebhookSinkConfig)
 	}
 	return options
 }
@@ -264,7 +336,7 @@ func RunNemesis(
 	}
 
 	cfo := newChangefeedOption(testName)
-	log.Infof(ctx, "Using changefeed options: %s", cfo.String())
+	log.Infof(ctx, "Using changefeed options: %s", cfo.OptionString())
 	foo, err := f.Feed(fmt.Sprintf(
 		`CREATE CHANGEFEED FOR foo WITH updated, resolved%s`,
 		cfo.OptionString(),
