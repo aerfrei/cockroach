@@ -23,6 +23,7 @@ import (
 type ChangefeedOption struct {
 	Format            string
 	WebhookSinkConfig string
+	PubsubSinkConfig  string
 	BooleanOptions    map[string]bool
 }
 
@@ -104,6 +105,7 @@ func newSinkConfig() SinkConfig {
 func newChangefeedOption(sinkType string) ChangefeedOption {
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
+	isPubsub := strings.Contains(sinkType, "pubsub")
 
 	booleanOptionEligibility := map[string]bool{
 		"full_table_name": true,
@@ -123,8 +125,12 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 	}
 
 	// hangs
-	if isWebhook {
-		cfo.WebhookSinkConfig = newSinkConfig().OptionString()
+	//if isWebhook {
+	//	cfo.WebhookSinkConfig = newSinkConfig().OptionString()
+	//}
+
+	if isPubsub {
+		cfo.PubsubSinkConfig = newSinkConfig().OptionString()
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
@@ -148,6 +154,9 @@ func (cfo ChangefeedOption) OptionString() string {
 	}
 	if cfo.WebhookSinkConfig != "" {
 		options = options + fmt.Sprintf(", webhook_sink_config='%s'", cfo.WebhookSinkConfig)
+	}
+	if cfo.PubsubSinkConfig != "" {
+		options = options + fmt.Sprintf(", pubsub_sink_config='%s'", cfo.PubsubSinkConfig)
 	}
 	return options
 }
