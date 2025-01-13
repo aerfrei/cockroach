@@ -25,15 +25,17 @@ type ChangefeedOption struct {
 	WebhookSinkConfig string
 	PubsubSinkConfig  string
 	BooleanOptions    map[string]bool
+	KafkaSinkConfig   string
 }
 
 type SinkConfig struct {
 	Flush map[string]any
 	Retry map[string]any
+	Base  map[string]any
 }
 
 func (sk SinkConfig) OptionString() string {
-	nonEmptyConfig := make(map[string]map[string]any)
+	nonEmptyConfig := make(map[string]any)
 
 	if len(sk.Flush) > 0 {
 		nonEmptyConfig["Flush"] = sk.Flush
@@ -41,10 +43,13 @@ func (sk SinkConfig) OptionString() string {
 	if len(sk.Retry) > 0 {
 		nonEmptyConfig["Retry"] = sk.Retry
 	}
+	for k, v := range sk.Base {
+		nonEmptyConfig[k] = v
+	}
 
 	jsonData, err := json.Marshal(nonEmptyConfig)
 	if err != nil {
-		return ""
+		return "{}"
 	}
 
 	// This presents an issue. Seemingly anything with frequency set
@@ -55,7 +60,7 @@ func (sk SinkConfig) OptionString() string {
 	return string(jsonData)
 }
 
-func newSinkConfig() SinkConfig {
+func newSinkConfig(isKafka bool) SinkConfig {
 	flush := make(map[string]any)
 	nonZeroInterval := "500ms"
 
@@ -65,6 +70,9 @@ func newSinkConfig() SinkConfig {
 		// interval here but can reset it later.
 		flush["Messages"] = rand.Intn(10) + 1
 		flush["Frequency"] = nonZeroInterval
+	}
+	if isKafka && rand.Intn(2) < 1 {
+		flush["MaxMessages"] = rand.Intn(10000) + 1
 	}
 	if rand.Intn(2) < 1 {
 		flush["Bytes"] = rand.Intn(1000) + 1
@@ -76,20 +84,67 @@ func newSinkConfig() SinkConfig {
 		flush["Frequency"] = interval
 	}
 
-	flush["Frequency"] = "100ms"
-
 	retry := make(map[string]any)
-	if rand.Intn(2) < 1 {
+	if !isKafka && rand.Intn(2) < 1 {
 		if rand.Intn(2) < 1 {
 			retry["Max"] = "inf"
 		} else {
 			retry["Max"] = rand.Intn(5) + 1
 		}
 	}
-	if rand.Intn(2) < 1 {
+	if !isKafka && rand.Intn(2) < 1 {
 		intervals := []string{"100ms", "500ms", "1s", "5s"}
 		interval := intervals[rand.Intn(len(intervals))]
 		retry["Backoff"] = interval
+	}
+	base := make(map[string]any)
+
+	if isKafka && rand.Intn(2) < 1 {
+		clientIds := []string{"ABCabc123._-", "FooBar", "2002-02-02.1_1"}
+		clientId := clientIds[rand.Intn(len(clientIds))]
+		base["ClientID"] = clientId
+	}
+
+	if isKafka && rand.Intn(2) < 1 {
+		versions := []string{"2.7.2", "0.8.2.0"}
+		version := versions[rand.Intn(len(versions))]
+		base["Version"] = version
+	}
+
+	if isKafka && rand.Intn(2) < 1 {
+		compressions := []string{"NONE", "GZIP", "SNAPPY"}
+		// lz4 compression requires Version >= V0_10_0_0
+		if base["Version"] != "0.8.2.0" {
+			compressions = append(compressions, "LZ4")
+		}
+		// zstd compression requires Version >= V2_1_0_0
+		if base["Version"] == "2.7.2" {
+			compressions = append(compressions, "ZSTD")
+		}
+		compression := compressions[rand.Intn(len(compressions))]
+		base["Compression"] = compression
+		if compression == "GZIP" {
+			level := rand.Intn(10)
+			base["CompressionLevel"] = level
+
+		}
+		if base["Version"] == "2.7.2" && compression == "ZSTD" {
+			level := rand.Intn(4) + 1
+			base["CompressionLevel"] = level
+
+		}
+
+		if base["Version"] != "0.8.2.0" && compression == "LZ4" {
+			levels := []int{0, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072}
+			level := levels[rand.Intn(len(levels))]
+			base["CompressionLevel"] = level
+		}
+	}
+
+	if isKafka && rand.Intn(2) < 1 {
+		levels := []string{"ONE", "NONE", "ALL"}
+		level := levels[rand.Intn(len(levels))]
+		base["RequiredAcks"] = level
 	}
 
 	sinkConfig := SinkConfig{}
@@ -99,6 +154,10 @@ func newSinkConfig() SinkConfig {
 	if len(retry) > 0 {
 		sinkConfig.Retry = retry
 	}
+	if len(base) > 0 {
+		sinkConfig.Base = base
+	}
+
 	return sinkConfig
 }
 
@@ -106,6 +165,7 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
 	isPubsub := strings.Contains(sinkType, "pubsub")
+	isKafka := strings.Contains(sinkType, "kafka")
 
 	booleanOptionEligibility := map[string]bool{
 		"full_table_name": true,
@@ -126,11 +186,15 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 
 	// hangs
 	//if isWebhook {
-	//	cfo.WebhookSinkConfig = newSinkConfig().OptionString()
+	//	cfo.WebhookSinkConfig = newSinkConfig(isKafka).OptionString()
 	//}
 
 	if isPubsub {
-		cfo.PubsubSinkConfig = newSinkConfig().OptionString()
+		cfo.PubsubSinkConfig = newSinkConfig(isKafka).OptionString()
+	}
+
+	if isKafka {
+		cfo.KafkaSinkConfig = newSinkConfig(isKafka).OptionString()
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
@@ -157,6 +221,9 @@ func (cfo ChangefeedOption) OptionString() string {
 	}
 	if cfo.PubsubSinkConfig != "" {
 		options = options + fmt.Sprintf(", pubsub_sink_config='%s'", cfo.PubsubSinkConfig)
+	}
+	if cfo.KafkaSinkConfig != "" {
+		options = options + fmt.Sprintf(", kafka_sink_config='%s'", cfo.KafkaSinkConfig)
 	}
 	return options
 }
