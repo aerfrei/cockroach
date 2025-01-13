@@ -26,6 +26,7 @@ type ChangefeedOption struct {
 	PubsubSinkConfig  string
 	BooleanOptions    map[string]bool
 	KafkaSinkConfig   string
+	InitialScan       string
 }
 
 type SinkConfig struct {
@@ -161,11 +162,25 @@ func newSinkConfig(isKafka bool) SinkConfig {
 	return sinkConfig
 }
 
-func newChangefeedOption(sinkType string) ChangefeedOption {
+func newChangefeedOption(sinkType string, nOp NemesesOption) ChangefeedOption {
 	isCloudstorage := strings.Contains(sinkType, "cloudstorage")
 	isWebhook := strings.Contains(sinkType, "webhook")
 	isPubsub := strings.Contains(sinkType, "pubsub")
 	isKafka := strings.Contains(sinkType, "kafka")
+
+	cfo := ChangefeedOption{}
+
+	//if rand.Intn(2) < 1 {
+	if !nOp.EnableFpValidator {
+		//options := []string{"no", "yes", "only"}
+		options := []string{"only"}
+		option := options[rand.Intn(len(options))]
+		cfo.InitialScan = option
+	}
+
+	cfo.BooleanOptions = make(map[string]bool)
+	cfo.BooleanOptions["updated"] = cfo.InitialScan != "only"
+	cfo.BooleanOptions["resolved"] = cfo.InitialScan != "only"
 
 	booleanOptionEligibility := map[string]bool{
 		"full_table_name": true,
@@ -174,12 +189,10 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 		// messages (see extractKeyFromJSONValue function).
 		// TODO: enable testing key_in_value for cloudstorage and webhook sinks
 		"key_in_value":   !isCloudstorage && !isWebhook,
-		"diff":           true,
-		"mvcc_timestamp": true,
+		"diff":           cfo.InitialScan != "only",
+		"mvcc_timestamp": cfo.InitialScan != "only",
 	}
 
-	cfo := ChangefeedOption{}
-	cfo.BooleanOptions = make(map[string]bool)
 	for option, eligible := range booleanOptionEligibility {
 		cfo.BooleanOptions[option] = eligible && rand.Intn(2) < 1
 	}
@@ -207,25 +220,33 @@ func newChangefeedOption(sinkType string) ChangefeedOption {
 }
 
 func (cfo ChangefeedOption) OptionString() string {
-	options := ""
+	var options []string
 	for option, value := range cfo.BooleanOptions {
 		if value {
-			options = options + ", " + option
+			options = append(options, option)
 		}
 	}
-	if cfo.Format == "parquet" {
-		options = options + ", format=parquet"
+	if cfo.Format != "" {
+		option := fmt.Sprintf("format=%s", cfo.Format)
+		options = append(options, option)
+	}
+	if cfo.InitialScan != "" {
+		option := fmt.Sprintf("initial_scan='%s'", cfo.InitialScan)
+		options = append(options, option)
 	}
 	if cfo.WebhookSinkConfig != "" {
-		options = options + fmt.Sprintf(", webhook_sink_config='%s'", cfo.WebhookSinkConfig)
+		option := fmt.Sprintf("webhook_sink_config='%s'", cfo.WebhookSinkConfig)
+		options = append(options, option)
 	}
 	if cfo.PubsubSinkConfig != "" {
-		options = options + fmt.Sprintf(", pubsub_sink_config='%s'", cfo.PubsubSinkConfig)
+		option := fmt.Sprintf("pubsub_sink_config='%s'", cfo.PubsubSinkConfig)
+		options = append(options, option)
 	}
 	if cfo.KafkaSinkConfig != "" {
-		options = options + fmt.Sprintf(", kafka_sink_config='%s'", cfo.KafkaSinkConfig)
+		option := fmt.Sprintf("kafka_sink_config='%s'", cfo.KafkaSinkConfig)
+		options = append(options, option)
 	}
-	return options
+	return fmt.Sprintf("WITH %s", strings.Join(options, ","))
 }
 
 type NemesesOption struct {
@@ -241,6 +262,10 @@ var NemesesOptions = []NemesesOption{
 	{
 		EnableFpValidator: false,
 		EnableSQLSmith:    true,
+	},
+	{
+		EnableFpValidator: false,
+		EnableSQLSmith:    false,
 	},
 }
 
@@ -411,10 +436,10 @@ func RunNemesis(
 		}
 	}
 
-	cfo := newChangefeedOption(testName)
+	cfo := newChangefeedOption(testName, nOp)
 	log.Infof(ctx, "Using changefeed options: %s", cfo.OptionString())
 	foo, err := f.Feed(fmt.Sprintf(
-		`CREATE CHANGEFEED FOR foo WITH updated, resolved%s`,
+		`CREATE CHANGEFEED FOR foo %s`,
 		cfo.OptionString(),
 	))
 	if err != nil {
@@ -487,6 +512,10 @@ func RunNemesis(
 		if err := openTxn(fsm.Args{Ctx: ctx, Extended: ns, Payload: payload}); err != nil {
 			return nil, err
 		}
+	}
+
+	if cfo.InitialScan == "only" {
+		return ns.v, nil
 	}
 
 	// Run the state machine until it finishes. Exit criteria is in `nextEvent`

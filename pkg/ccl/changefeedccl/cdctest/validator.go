@@ -282,7 +282,12 @@ func (v *beforeAfterValidator) checkRowAt(
 		// We expect the row to be present ...
 		stmtBuf.WriteString(`SELECT count(*) = 1 `)
 	}
-	fmt.Fprintf(&stmtBuf, `FROM %s AS OF SYSTEM TIME '%s' WHERE `, v.table, ts.AsOfSystemTime())
+
+	if ts.IsEmpty() {
+		fmt.Fprintf(&stmtBuf, `FROM %s WHERE `, v.table)
+	} else {
+		fmt.Fprintf(&stmtBuf, `FROM %s AS OF SYSTEM TIME '%s' WHERE `, v.table, ts.AsOfSystemTime())
+	}
 	if rowDatums == nil || rowDatums.Type() == json.NullJSONType {
 		// ... with the primary key.
 		for i, datum := range primaryKeyDatums {
@@ -918,6 +923,7 @@ func (v *CountValidator) Failures() []string {
 	return v.v.Failures()
 }
 
+// interesting
 // ParseJSONValueTimestamps returns the updated or resolved timestamp set in the
 // provided `format=json` value. Exported for acceptance testing.
 func ParseJSONValueTimestamps(v []byte) (updated, resolved hlc.Timestamp, err error) {
