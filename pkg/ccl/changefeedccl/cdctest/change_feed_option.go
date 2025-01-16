@@ -13,19 +13,28 @@ import (
 )
 
 type ChangefeedOption struct {
-	Format           string
-	PubsubSinkConfig string
 	BooleanOptions   map[string]bool
+	Envelope         string
+	Format           string
 	KafkaSinkConfig  string
+	PubsubSinkConfig string
 }
 
 func newChangefeedOption(testName string) ChangefeedOption {
 	isCloudstorage := strings.Contains(testName, "cloudstorage")
-	isWebhook := strings.Contains(testName, "webhook")
-	isPubsub := strings.Contains(testName, "pubsub")
 	isKafka := strings.Contains(testName, "kafka")
+	isPubsub := strings.Contains(testName, "pubsub")
+	isWebhook := strings.Contains(testName, "webhook")
 
 	cfo := ChangefeedOption{}
+
+	//if rand.Intn(2) < 1 {
+	//      values := []string{"wrapped", "bare", "key_only", "row"}
+	//      value := values[rand.Intn(len(values))]
+	//      cfo.Envelope = value
+	//}
+
+	cfo.Envelope = "row"
 
 	cfo.BooleanOptions = make(map[string]bool)
 
@@ -34,7 +43,7 @@ func newChangefeedOption(testName string) ChangefeedOption {
 		// Because key_in_value is on by default for cloudstorage and webhook sinks,
 		// the key in the value is extracted and removed from the test feed
 		// messages (see extractKeyFromJSONValue function).
-		"key_in_value":   !isCloudstorage && !isWebhook,
+		"key_in_value":   !isCloudstorage && !isWebhook && cfo.Envelope == "wrapped",
 		"diff":           true,
 		"mvcc_timestamp": true,
 	}
@@ -66,6 +75,10 @@ func (cfo ChangefeedOption) OptionString() string {
 		if value {
 			options = append(options, option)
 		}
+	}
+	if cfo.Envelope != "" {
+		option := fmt.Sprintf("envelope=%s", cfo.Envelope)
+		options = append(options, option)
 	}
 	if cfo.Format != "" {
 		option := fmt.Sprintf("format=%s", cfo.Format)

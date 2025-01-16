@@ -820,6 +820,7 @@ func noteFeedMessage(a fsm.Args) error {
 			return errors.Errorf(`expected another message`)
 		}
 
+		fmt.Println("noting row, m", m)
 		if len(m.Resolved) > 0 {
 			_, ts, err := ParseJSONValueTimestamps(m.Resolved)
 			if err != nil {
