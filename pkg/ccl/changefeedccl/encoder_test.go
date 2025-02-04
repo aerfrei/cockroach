@@ -1206,7 +1206,7 @@ func TestJsonRountrip(t *testing.T) {
 			dRow := rowenc.EncDatumRow{rowenc.EncDatum{Datum: tree.NewDInt(1)}, rowenc.EncDatum{Datum: test.datum}}
 			cdcRow := cdcevent.TestingMakeEventRow(tableDesc, 0, dRow, false)
 
-			encoder, err := makeJSONEncoder(context.Background(), jsonEncoderOptions{})
+			encoder, err := makeJSONEncoder(context.Background(), jsonEncoderOptions{}, enrichedEnvelopeSourceContext{})
 			require.NoError(t, err)
 
 			// Encode the value to a string and parse it. Assert that the parsed json matches the

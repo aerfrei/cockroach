@@ -10,6 +10,7 @@ import (
 
 	"github.com/cockroachdb/cockroach/pkg/ccl/changefeedccl/cdcevent"
 	"github.com/cockroachdb/cockroach/pkg/ccl/changefeedccl/changefeedbase"
+	"github.com/cockroachdb/cockroach/pkg/server"
 	"github.com/cockroachdb/cockroach/pkg/util/hlc"
 	"github.com/cockroachdb/errors"
 )
@@ -45,10 +46,15 @@ func getEncoder(
 	encodeForQuery bool,
 	p externalConnectionProvider,
 	sliMetrics *sliMetrics,
+	cfg server.Config,
 ) (Encoder, error) {
 	switch opts.Format {
 	case changefeedbase.OptFormatJSON:
-		return makeJSONEncoder(ctx, jsonEncoderOptions{EncodingOptions: opts, encodeForQuery: encodeForQuery})
+		var srcCtx enrichedEnvelopeSourceContext
+		if opts.Envelope == changefeedbase.OptEnvelopeEnriched {
+			srcCtx.clusterName = cfg.ClusterName
+		}
+		return makeJSONEncoder(ctx, jsonEncoderOptions{EncodingOptions: opts, encodeForQuery: encodeForQuery}, srcCtx)
 	case changefeedbase.OptFormatAvro, changefeedbase.DeprecatedOptFormatAvro:
 		return newConfluentAvroEncoder(opts, targets, p, sliMetrics)
 	case changefeedbase.OptFormatCSV:

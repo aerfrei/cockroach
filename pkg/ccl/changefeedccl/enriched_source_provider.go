@@ -5,21 +5,26 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/util/json"
 )
 
-type enrichedEnveloptSourceProviderOpts struct {
+type enrichedEnvelopeSourceProviderOpts struct {
 	updated, diff, mvccTimestamp bool
+}
+type enrichedEnvelopeSourceContext struct {
+	clusterName string
 }
 
 type enrichedEnvelopeSourceProvider struct {
-	opts enrichedEnveloptSourceProviderOpts
-
+	opts        enrichedEnvelopeSourceProviderOpts
+	srcCtx      enrichedEnvelopeSourceContext
 	jsonBuilder json.FixedKeysObjectBuilder
 	// TODO(#139692): Add schema info support.
 	// TODO(#139691): Add job info support.
 	// TODO(#139690): Add node/cluster info support.
 }
 
-func newEnrichedEnvelopeSourceProvider(opts enrichedEnveloptSourceProviderOpts) *enrichedEnvelopeSourceProvider {
-	return &enrichedEnvelopeSourceProvider{opts: opts}
+func newEnrichedEnvelopeSourceProvider(
+	opts enrichedEnvelopeSourceProviderOpts, srcCtx enrichedEnvelopeSourceContext,
+) *enrichedEnvelopeSourceProvider {
+	return &enrichedEnvelopeSourceProvider{opts: opts, srcCtx: srcCtx}
 }
 
 // TODO(#139655): Implement this.

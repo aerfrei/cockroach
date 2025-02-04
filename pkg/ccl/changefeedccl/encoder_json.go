@@ -93,7 +93,9 @@ type jsonEncoderOptions struct {
 	encodeForQuery bool
 }
 
-func makeJSONEncoder(ctx context.Context, opts jsonEncoderOptions) (*jsonEncoder, error) {
+func makeJSONEncoder(
+	ctx context.Context, opts jsonEncoderOptions, srcCtx enrichedEnvelopeSourceContext,
+) (*jsonEncoder, error) {
 	versionCache := cache.NewUnorderedCache(cdcevent.DefaultCacheConfig)
 	e := &jsonEncoder{
 		envelopeType:       opts.Envelope,
@@ -121,6 +123,12 @@ func makeJSONEncoder(ctx context.Context, opts jsonEncoderOptions) (*jsonEncoder
 				return &versionEncoder{encodeJSONValueNullAsObject: opts.EncodeJSONValueNullAsObject}
 			}).(*versionEncoder)
 		},
+		enrichedEnvelopeSourceProvider: newEnrichedEnvelopeSourceProvider(
+			enrichedEnvelopeSourceProviderOpts{
+				diff:          opts.Diff,
+				updated:       opts.UpdatedTimestamps,
+				mvccTimestamp: opts.MVCCTimestamps,
+			}, srcCtx),
 	}
 
 	if !canJSONEncodeMetadata(e.envelopeType) {
@@ -577,7 +585,7 @@ func EncodeAsJSONChangefeedWithFlags(
 	// If this function ends up needing to be optimized, cache or pool these.
 	// Nontrivial to do as an encoder generally isn't safe to call on different
 	// rows in parallel.
-	e, err := makeJSONEncoder(ctx, jsonEncoderOptions{EncodingOptions: opts})
+	e, err := makeJSONEncoder(ctx, jsonEncoderOptions{EncodingOptions: opts}, enrichedEnvelopeSourceContext{})
 	if err != nil {
 		return nil, err
 	}
