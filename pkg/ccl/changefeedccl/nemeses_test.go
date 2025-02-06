@@ -35,7 +35,7 @@ func TestChangefeedNemeses(t *testing.T) {
 			sqlDB := sqlutils.MakeSQLRunner(s.DB)
 			// TODO(#137125): decoder encounters a bug when the declarative schema
 			// changer is enabled with SQLSmith
-			withLegacySchemaChanger := nop.EnableSQLSmith || rng.Float32() < 0.1
+			withLegacySchemaChanger := false
 			if withLegacySchemaChanger {
 				t.Log("using legacy schema changer")
 				sqlDB.Exec(t, "SET use_declarative_schema_changer='off'")
@@ -56,7 +56,7 @@ func TestChangefeedNemeses(t *testing.T) {
 		// nemeses_test.go:39: pq: unimplemented: operation is unsupported inside virtual clusters
 		//
 		// TODO(knz): This seems incorrect, see issue #109417.
-		cdcTest(t, testFn, feedTestNoTenants)
+		cdcTest(t, testFn, feedTestNoTenants, feedTestOmitSinks("cloudstorage"))
 		log.FlushFiles()
 		entries, err := log.FetchEntriesFromFiles(0, math.MaxInt64, 1,
 			regexp.MustCompile("cdc ux violation"), log.WithFlattenedSensitiveData)

@@ -240,6 +240,10 @@ type NemesesOption struct {
 var NemesesOptions = []NemesesOption{
 	{
 		EnableFpValidator: true,
+		EnableSQLSmith:    false,
+	},
+	{
+		EnableFpValidator: false,
 		EnableSQLSmith:    true,
 	},
 }

@@ -166,8 +166,8 @@ func (v *orderValidator) NoteRow(
 	latestResolved := v.resolved[partition]
 	if updated.Less(latestResolved) {
 		v.failures = append(v.failures, fmt.Sprintf(
-			`topic %s partition %s: saw new row timestamp %s after %s was resolved`,
-			v.topic, partition, updated.AsOfSystemTime(), latestResolved.AsOfSystemTime(),
+			`topic %s partition %s: saw new row timestamp %s after %s was resolved %s %s`,
+			v.topic, partition, updated.AsOfSystemTime(), latestResolved.AsOfSystemTime(), key, value,
 		))
 	}
 
