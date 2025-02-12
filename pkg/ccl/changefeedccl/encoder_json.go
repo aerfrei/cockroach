@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/cockroach/pkg/ccl/changefeedccl/avro"
 	"github.com/cockroachdb/cockroach/pkg/ccl/changefeedccl/cdcevent"
 	"github.com/cockroachdb/cockroach/pkg/ccl/changefeedccl/changefeedbase"
 	"github.com/cockroachdb/cockroach/pkg/ccl/utilccl"
@@ -28,6 +29,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/cockroach/pkg/util/timeutil"
 	"github.com/cockroachdb/errors"
+	"github.com/linkedin/goavro/v2"
 )
 
 const (
@@ -52,11 +54,10 @@ func init() {
 // to its value. Updated timestamps in rows and resolved timestamp payloads are
 // stored in a sub-object under the `__crdb__` key in the top-level JSON object.
 type jsonEncoder struct {
-	updatedField, mvccTimestampField, beforeField, keyInValue, topicInValue bool
-
+	updatedField, mvccTimestampField, beforeField, keyInValue, topicInValue,
+	sourceField, schemaField bool
 	envelopeType                   changefeedbase.EnvelopeType
 	enrichedEnvelopeSourceProvider *enrichedSourceProvider
-	enrichedProperties             map[changefeedbase.EnrichedProperty]struct{}
 
 	buf             bytes.Buffer
 	versionEncoder  func(ed *cdcevent.EventDescriptor, isPrev bool) *versionEncoder
@@ -105,10 +106,11 @@ func makeJSONEncoder(
 		customKeyColumn:    opts.CustomKeyColumn,
 		// In the bare envelope we don't output diff directly, it's incorporated into the
 		// projection as desired.
-		beforeField:        opts.Diff && opts.Envelope != changefeedbase.OptEnvelopeBare,
-		keyInValue:         opts.KeyInValue,
-		topicInValue:       opts.TopicInValue,
-		enrichedProperties: opts.EnrichedProperties,
+		beforeField:  opts.Diff && opts.Envelope != changefeedbase.OptEnvelopeBare,
+		keyInValue:   opts.KeyInValue,
+		topicInValue: opts.TopicInValue,
+		sourceField:  inSet(changefeedbase.EnrichedPropertySource, opts.EnrichedProperties),
+		schemaField:  inSet(changefeedbase.EnrichedPropertySchema, opts.EnrichedProperties),
 		versionEncoder: func(ed *cdcevent.EventDescriptor, isPrev bool) *versionEncoder {
 			key := jsonEncoderVersionKey{
 				CacheKey: cdcevent.CacheKey{
@@ -518,10 +520,64 @@ func deduceOp(updated, prev cdcevent.Row) enrichedEventOp {
 	return eventTypeUpdate
 }
 
+func inSet[S ~string](k S, set map[S]struct{}) bool {
+	_, ok := set[k]
+	return ok
+}
+
+func (e *jsonEncoder) makeSchema(updated, prev cdcevent.Row) (json.JSON, error) {
+	opts := avro.EnvelopeOpts{
+		BeforeField:        e.beforeField,
+		AfterField:         true,
+		UpdatedField:       e.updatedField,
+		MVCCTimestampField: e.mvccTimestampField,
+		OpField:            true,
+		TsField:            true,
+		SourceField:        e.sourceField,
+	}
+
+	var before *avro.DataRecord
+	var source *avro.FunctionalRecord
+	var err error
+
+	after, err := avro.TableToAvroSchema(updated, `after`, "" /* namespace */)
+	if err != nil {
+		return nil, err
+	}
+
+	if e.beforeField {
+		before, err = avro.TableToAvroSchema(prev, `before`, "" /* namespace */)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if e.sourceField {
+		// TODO(#139689): This will be implemented by the source provider.
+		fields := []*avro.SchemaField{
+			{Name: "changefeed_sink", SchemaType: []avro.SchemaType{avro.SchemaTypeNull, avro.SchemaTypeString}},
+		}
+		sourceFn := func(row cdcevent.Row) (map[string]any, error) {
+			return map[string]any{
+				"changefeed_sink": goavro.Union(avro.SchemaTypeString, "kafka"),
+			}, nil
+
+		}
+		if source, err = avro.NewFunctionalRecord("source", "" /* namespace */, fields, sourceFn); err != nil {
+			return nil, err
+		}
+	}
+
+	envelope, err := avro.NewEnvelopeRecord("topic", opts, before, after, nil /*record*/, source, "" /* namespace */)
+	if err != nil {
+		return nil, err
+	}
+	schemaStr := envelope.Schema() // todo: json variant (transformation, return json.JSON)
+}
+
 func (e *jsonEncoder) initEnrichedEnvelope(ctx context.Context) error {
 	var err error
 	var envelopeBuilder *json.FixedKeysObjectBuilder
-	if _, ok := e.enrichedProperties[changefeedbase.EnrichedPropertySchema]; ok {
+	if e.schemaField {
 		// TODO(#139658): implement schema field.
 		envelopeKeys := []string{"payload"}
 		envelopeBuilder, err = json.NewFixedKeysObjectBuilder(envelopeKeys)
