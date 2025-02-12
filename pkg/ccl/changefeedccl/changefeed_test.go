@@ -3928,12 +3928,11 @@ func TestChangefeedEnriched(t *testing.T) {
 					}
 				}`)
 			},
-			expectedKey: `{"payload": {"a": 0}, "schema": "TODO"}`,
+			expectedKey: `{"payload": {"a": 0}, "schema": {"field": "TODOTABLENAME", "fields": [{"field": "a", "optional": true, "type": "int64"}], "type": "struct"}}`,
 		},
 		{
 			name:               "with source",
 			enrichedProperties: []string{"source"},
-			// parseJSON(t, `{"after": {"a": 0, "b": "dog"}, "op": "c", "source": {"job_id": "1046345869764362241"}}`),
 			msgBodyJSONFunc: func(source map[string]any) map[string]any {
 				return map[string]any{
 					"after":  parseJSON(t, `{"a": 0, "b": "dog"}`),
@@ -3997,7 +3996,7 @@ func TestChangefeedEnriched(t *testing.T) {
 					}`),
 				}
 			},
-			expectedKey: `{"payload": {"a": 0}, "schema": "TODO"}`,
+			expectedKey: `{"payload": {"a": 0}, "schema": {"field": "TODOTABLENAME", "fields": [{"field": "a", "optional": true, "type": "int64"}], "type": "struct"}}`,
 		},
 	}
 

@@ -197,6 +197,19 @@ func (e *jsonEncoder) EncodeKey(ctx context.Context, row cdcevent.Row) (enc []by
 	return e.buf.Bytes(), nil
 }
 
+// TODO: cache me
+func (e *versionEncoder) makeKeySchema(it cdcevent.Iterator) (json.JSON, error) {
+	// TODO: get the name from targets like in encoder_avro/rawTableName()
+	sqlName := "TODOTABLENAME"
+	// TODO: consider refactoring the avro pkg into `schema'd data` or smth, since we're now using it for this json (kafka connect) schema too.
+	schema, err := avro.NewSchemaForRow(it, sqlName, "" /* namespace */)
+	if err != nil {
+		return nil, err
+	}
+
+	return schema.JSONSchema(json.NewObjectBuilder(3))
+}
+
 // encodeKeyRawAsObject encodes the key as a JSON object. if
 // includeKeyObjectSchema is true, the key is nested under the "payload" key.
 func (e *versionEncoder) encodeKeyRawAsObject(
@@ -206,8 +219,16 @@ func (e *versionEncoder) encodeKeyRawAsObject(
 	var outerBuilder *json.FixedKeysObjectBuilder
 	kb := json.NewObjectBuilder(1)
 	if e.includeKeyObjectSchema {
-		outerBuilder, err = json.NewFixedKeysObjectBuilder([]string{"payload"})
+		outerBuilder, err = json.NewFixedKeysObjectBuilder([]string{"payload", "schema"})
 		if err != nil {
+			return nil, err
+		}
+		// TODO: how does this interact with custom_key_column? i think we support it
+		schema, err := e.makeKeySchema(it)
+		if err != nil {
+			return nil, err
+		}
+		if err := outerBuilder.Set("schema", schema); err != nil {
 			return nil, err
 		}
 	}
@@ -530,8 +551,8 @@ func inSet[S ~string](k S, set map[S]struct{}) bool {
 	return ok
 }
 
-func (e *jsonEncoder) makeSchema(updated, prev cdcevent.Row) (json.JSON, error) {
-	// TODO: cache me
+// TODO: cache me
+func (e *jsonEncoder) makeValueSchema(updated, prev cdcevent.Row) (json.JSON, error) {
 	opts := avro.EnvelopeOpts{
 		BeforeField:        e.beforeField,
 		AfterField:         true,
@@ -643,7 +664,7 @@ func (e *jsonEncoder) initEnrichedEnvelope(ctx context.Context) error {
 		}
 
 		// TODO: do this for the key too
-		schema, err := e.makeSchema(updated, prev)
+		schema, err := e.makeValueSchema(updated, prev)
 		if err != nil {
 			return nil, err
 		}
