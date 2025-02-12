@@ -48,17 +48,20 @@ func newEnrichedSourceProvider(
 	}
 }
 
-func (p *enrichedSourceProvider) Schema() (*avro.FunctionalRecord, error) {
-	fields := []*avro.SchemaField{
+func (p *enrichedSourceProvider) avroSourceFunction(row cdcevent.Row) (map[string]any, error) {
+	return map[string]any{
+		"job_id": goavro.Union(avro.SchemaTypeString, p.sourceData.jobId),
+	}, nil
+}
+
+func (p *enrichedSourceProvider) getAvroFields() []*avro.SchemaField {
+	return []*avro.SchemaField{
 		{Name: "job_id", SchemaType: []avro.SchemaType{avro.SchemaTypeNull, avro.SchemaTypeString}},
 	}
-	// TODO: move this to something callable by GetAvro(), since it needs it too
-	sourceFn := func(row cdcevent.Row) (map[string]any, error) {
-		return map[string]any{
-			"job_id": goavro.Union(avro.SchemaTypeString, p.sourceData.jobId),
-		}, nil
-	}
-	rec, err := avro.NewFunctionalRecord("source", "" /* namespace */, fields, sourceFn)
+}
+
+func (p *enrichedSourceProvider) Schema() (*avro.FunctionalRecord, error) {
+	rec, err := avro.NewFunctionalRecord("source", "" /* namespace */, p.getAvroFields(), p.avroSourceFunction)
 	if err != nil {
 		return nil, err
 	}
@@ -91,14 +94,19 @@ func (p *enrichedSourceProvider) GetJSON(row cdcevent.Row) (json.JSON, error) {
 	return j, nil
 }
 
-func (p *enrichedSourceProvider) GetAvro(row cdcevent.Row) ([]byte, error) {
+func (p *enrichedSourceProvider) GetAvro(
+	row cdcevent.Row, schemaPrefix string,
+) (*avro.FunctionalRecord, error) {
 	ck := row.TableID
 	if bs, ok := p.avroCache.Get(ck); ok {
-		return bs.([]byte), nil
+		return bs.(*avro.FunctionalRecord), nil
 	}
 
-	// TODO(#139655): Implement this.
+	sourceDataSchema, err := avro.NewFunctionalRecord("source", schemaPrefix, p.getAvroFields(), p.avroSourceFunction)
+	if err != nil {
+		return nil, err
+	}
 
-	p.avroCache.Add(ck, nil)
-	return nil, nil
+	p.avroCache.Add(ck, sourceDataSchema)
+	return sourceDataSchema, nil
 }

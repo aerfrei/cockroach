@@ -4055,8 +4055,14 @@ func TestChangefeedEnrichedAvro(t *testing.T) {
 		foo := feed(t, f, `CREATE CHANGEFEED FOR foo WITH envelope=enriched, format=avro, confluent_schema_registry='localhost:90909'`)
 		defer closeFeed(t, foo)
 
+		var jobID int64
+		if _, ok := foo.(*sinklessFeed); !ok {
+			sqlDB.QueryRow(t, `SELECT job_id FROM [SHOW JOBS] where job_type='CHANGEFEED'`).Scan(&jobID)
+		}
+
 		assertPayloadsEnvelopeStripTs(t, foo, changefeedbase.OptEnvelopeEnriched, []string{
-			`foo: {"a":{"long":0}}->{"after": {"foo": {"a": {"long": 0}, "b": {"string": "dog"}}}, "op": {"string": "c"}, "source": {"source": {"changefeed_sink": {"string": "kafka"}}}}`,
+			fmt.Sprintf(`foo: {"a":{"long":0}}->{"after": {"foo": {"a": {"long": 0}, "b": {"string": "dog"}}}, "op": {"string": "c"}, "source": {"source": {"job_id": {"string": "%d"}}}}`,
+				jobID),
 		})
 	}
 	cdcTest(t, testFn, feedTestForceSink("kafka"))
