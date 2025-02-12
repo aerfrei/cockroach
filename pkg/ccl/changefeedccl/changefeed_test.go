@@ -4028,7 +4028,6 @@ func TestChangefeedEnriched(t *testing.T) {
 				}
 				source := map[string]any{"job_id": strconv.FormatInt(jobID, 10)}
 
-				// (tc.msgBodyJSONFunc(source))
 				msgBodyJSON, err := json.MakeJSON(tc.msgBodyJSONFunc(source))
 				require.NoError(t, err)
 				msgBody := msgBodyJSON.String()
