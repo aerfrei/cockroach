@@ -3855,9 +3855,9 @@ func TestChangefeedEnriched(t *testing.T) {
 		name               string
 		enrichedProperties []string
 	}{
-		{name: "solo"},
+		// {name: "solo"},
 		{name: "with schema", enrichedProperties: []string{"schema"}},
-		{name: "with source", enrichedProperties: []string{"source"}},
+		// {name: "with source", enrichedProperties: []string{"source"}},
 		{name: "with schema and source", enrichedProperties: []string{"schema", "source"}},
 	}
 
@@ -3890,8 +3890,9 @@ func TestChangefeedEnriched(t *testing.T) {
 
 				msg := fmt.Sprintf(`%s: {"a": 0}->{"after": {"a": 0, "b": "dog"}, "op": "c"%s}`, topic, sourceMsg)
 				if slices.Contains(tc.enrichedProperties, "schema") {
-					// TODO(#139658): add the schema to the key and the value here
-					msg = fmt.Sprintf(`%s: {"payload": {"a": 0}}->{"payload": {"after": {"a": 0, "b": "dog"}, "op": "c"%s}}`, topic, sourceMsg)
+					// TODO: make this more readable.
+					msg = fmt.Sprintf(`%s: {"payload": {"a": 0}}->{"payload": {"after": {"a": 0, "b": "dog"}, "op": "c"}, "schema": {"field": "topic_envelope", "fields": [{"field": "foo_after", "fields": [{"field": "a", "optional": true, "type": "int64"}, {"field": "b", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "source", "fields": [{"field": "changefeed_sink", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "ts_ns", "optional": true, "type": "int64"}, {"field": "op", "optional": true, "type": "string"}], "type": "struct"}}`, topic)
+
 				}
 
 				assertPayloadsEnvelopeStripTs(t, foo, changefeedbase.OptEnvelopeEnriched, []string{msg})

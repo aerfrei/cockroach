@@ -6,7 +6,7 @@
 package avro
 
 import (
-	"encoding/json"
+	gojson "encoding/json"
 	"math/big"
 	"time"
 
@@ -21,6 +21,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/util/bitarray"
 	"github.com/cockroachdb/cockroach/pkg/util/duration"
 	"github.com/cockroachdb/cockroach/pkg/util/hlc"
+	"github.com/cockroachdb/cockroach/pkg/util/json"
 	"github.com/cockroachdb/cockroach/pkg/util/timeofday"
 	"github.com/cockroachdb/errors"
 	"github.com/linkedin/goavro/v2"
@@ -137,6 +138,61 @@ type SchemaField struct {
 	nativeEncodedSecondaryType map[string]interface{}
 }
 
+func stripOptional(t SchemaType) (SchemaType, bool) {
+	if a, ok := t.([]SchemaType); ok && len(a) == 2 {
+		if a[0] == SchemaTypeNull {
+			return a[1], true
+		}
+	}
+	return t, false
+}
+
+// There doesn't seem to be an official specification for this. See https://github.com/a0x8o/kafka/blob/master/connect/api/src/main/java/org/apache/kafka/connect/data/Schema.java#L45
+func (f *SchemaField) JSONSchema() (json.JSON, error) {
+	b := json.NewObjectBuilder(3)
+	typ, optional := stripOptional(f.SchemaType)
+
+	b.Add("field", json.FromString(f.Name))
+	b.Add("optional", json.FromBool(optional))
+
+	switch t := typ.(type) {
+	case logicalType:
+		panic("TODO")
+	case arrayType:
+		panic("TODO")
+
+	// i.e. *Record, or something embedding it.
+	case interface {
+		JSONSchema(*json.ObjectBuilder) (json.JSON, error)
+	}:
+		return t.JSONSchema(b)
+	case string:
+		var jsonType string
+		switch typ {
+		case SchemaTypeArray: // TODO
+		case SchemaTypeBoolean:
+			jsonType = "boolean"
+		case SchemaTypeBytes:
+			jsonType = "bytes"
+		case SchemaTypeDouble:
+			jsonType = "float64"
+		case SchemaTypeInt:
+			jsonType = "int32" // ?
+		case SchemaTypeLong:
+			jsonType = "int64" // ?
+		case SchemaTypeNull:
+			return nil, errors.AssertionFailedf(`null type should not be present in a schema`)
+		case SchemaTypeString:
+			jsonType = "string"
+		default:
+			return nil, errors.AssertionFailedf(`unknown scalar type %s`, typ)
+		}
+		b.Add("type", json.FromString(jsonType))
+	}
+
+	return b.Build(), nil
+}
+
 // Record is our representation of the schema of an avro record. Serializing
 // it to JSON gives the standard schema representation.
 type Record struct {
@@ -151,6 +207,23 @@ type Record struct {
 // passing to a schema registry.
 func (r *Record) Schema() string {
 	return r.codec.Schema()
+}
+
+// Schema returns the schema of the record as a JSON object, suitable for
+// using as a json schema.
+func (r *Record) JSONSchema(b *json.ObjectBuilder) (json.JSON, error) {
+	b.Add("type", json.FromString("struct"))
+	b.Add("field", json.FromString(r.Name))
+	fields := json.NewArrayBuilder(len(r.Fields))
+	for _, f := range r.Fields {
+		fieldSchema, err := f.JSONSchema()
+		if err != nil {
+			return nil, err
+		}
+		fields.Add(fieldSchema)
+	}
+	b.Add("fields", fields.Build())
+	return b.Build(), nil
 }
 
 // DataRecord is a `Record` that represents the schema of a SQL table
@@ -187,7 +260,7 @@ func NewFunctionalRecord(
 		nativeFromRowFn: nativeFromRowFn,
 	}
 
-	schemaJSON, err := json.Marshal(schema)
+	schemaJSON, err := gojson.Marshal(schema)
 	if err != nil {
 		return nil, err
 	}
@@ -819,7 +892,7 @@ func NewSchemaForRow(it cdcevent.Iterator, sqlName string, namespace string) (*D
 		return nil, err
 	}
 
-	schemaJSON, err := json.Marshal(schema)
+	schemaJSON, err := gojson.Marshal(schema)
 	if err != nil {
 		return nil, err
 	}
@@ -1047,7 +1120,7 @@ func NewEnvelopeRecord(
 		schema.Fields = append(schema.Fields, opField)
 	}
 
-	schemaJSON, err := json.Marshal(schema)
+	schemaJSON, err := gojson.Marshal(schema)
 	if err != nil {
 		return nil, err
 	}

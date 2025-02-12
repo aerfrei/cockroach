@@ -16,6 +16,7 @@ go_library(
         "//pkg/util/bitarray",
         "//pkg/util/duration",
         "//pkg/util/hlc",
+        "//pkg/util/json",
         "//pkg/util/timeofday",
         "@com_github_cockroachdb_apd_v3//:apd",
         "@com_github_cockroachdb_errors//:errors",

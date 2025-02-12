@@ -63,6 +63,9 @@ type jsonEncoder struct {
 	versionEncoder  func(ed *cdcevent.EventDescriptor, isPrev bool) *versionEncoder
 	envelopeEncoder func(evCtx eventContext, updated, prev cdcevent.Row) (json.JSON, error)
 	customKeyColumn string
+
+	keySchemaCache   *cache.UnorderedCache
+	valueSchemaCache *cache.UnorderedCache
 }
 
 var _ Encoder = &jsonEncoder{}
@@ -133,6 +136,9 @@ func makeJSONEncoder(
 			}).(*versionEncoder)
 		},
 		enrichedEnvelopeSourceProvider: sourceProvider,
+
+		keySchemaCache:   cache.NewUnorderedCache(encoderCacheConfig),
+		valueSchemaCache: cache.NewUnorderedCache(encoderCacheConfig),
 	}
 
 	if !canJSONEncodeMetadata(e.envelopeType) {
@@ -571,15 +577,14 @@ func (e *jsonEncoder) makeSchema(updated, prev cdcevent.Row) (json.JSON, error) 
 	if err != nil {
 		return nil, err
 	}
-	schemaStr := envelope.Schema() // todo: json variant (transformation, return json.JSON)
+	return envelope.JSONSchema(json.NewObjectBuilder(4))
 }
 
 func (e *jsonEncoder) initEnrichedEnvelope(ctx context.Context) error {
 	var err error
 	var envelopeBuilder *json.FixedKeysObjectBuilder
 	if e.schemaField {
-		// TODO(#139658): implement schema field.
-		envelopeKeys := []string{"payload"}
+		envelopeKeys := []string{"payload", "schema"}
 		envelopeBuilder, err = json.NewFixedKeysObjectBuilder(envelopeKeys)
 		if err != nil {
 			return err
@@ -639,6 +644,17 @@ func (e *jsonEncoder) initEnrichedEnvelope(ctx context.Context) error {
 		if err := envelopeBuilder.Set("payload", payload); err != nil {
 			return nil, err
 		}
+
+		// TODO: cache me
+		// TODO: do this for the key too
+		schema, err := e.makeSchema(updated, prev)
+		if err != nil {
+			return nil, err
+		}
+		if err := envelopeBuilder.Set("schema", schema); err != nil {
+			return nil, err
+		}
+
 		return envelopeBuilder.Build()
 	}
 	return nil
