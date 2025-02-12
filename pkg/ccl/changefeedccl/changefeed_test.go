@@ -3854,11 +3854,28 @@ func TestChangefeedEnriched(t *testing.T) {
 	cases := []struct {
 		name               string
 		enrichedProperties []string
+		expectedMsg        string
 	}{
-		// {name: "solo"},
-		{name: "with schema", enrichedProperties: []string{"schema"}},
-		// {name: "with source", enrichedProperties: []string{"source"}},
-		{name: "with schema and source", enrichedProperties: []string{"schema", "source"}},
+		{
+			name:        "solo",
+			expectedMsg: `%s: {"a": 0}->{"after": {"a": 0, "b": "dog"}, "op": "c"}`,
+		},
+		{
+			name:               "with schema",
+			enrichedProperties: []string{"schema"},
+			// TODO: make these more readable.
+			expectedMsg: `%s: {"payload": {"a": 0}}->{"payload": {"after": {"a": 0, "b": "dog"}, "op": "c"}, "schema": {"field": "topic_envelope", "fields": [{"field": "foo_after", "fields": [{"field": "a", "optional": true, "type": "int64"}, {"field": "b", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "ts_ns", "optional": true, "type": "int64"}, {"field": "op", "optional": true, "type": "string"}], "type": "struct"}}`,
+		},
+		{
+			name:               "with source",
+			enrichedProperties: []string{"source"},
+			expectedMsg:        `%s: {"payload": {"after": {"a": 0, "b": "dog"}, "op": "c", "source": {"changefeed_sink": "kafka"}}`,
+		},
+		{
+			name:               "with schema and source",
+			enrichedProperties: []string{"schema", "source"},
+			expectedMsg:        `%s: {"payload": {"a": 0}}->{"payload": {"after": {"a": 0, "b": "dog"}, "op": "c", "source": {"changefeed_sink": "kafka"}}, "schema": {"field": "topic_envelope", "fields": [{"field": "foo_after", "fields": [{"field": "a", "optional": true, "type": "int64"}, {"field": "b", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "source", "fields": [{"field": "changefeed_sink", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "ts_ns", "optional": true, "type": "int64"}, {"field": "op", "optional": true, "type": "string"}], "type": "struct"}}`,
+		},
 	}
 
 	for _, tc := range cases {
@@ -3888,14 +3905,9 @@ func TestChangefeedEnriched(t *testing.T) {
 				}
 				sourceMsg := fmt.Sprintf(`, "source": {"job_id": "%d"}`, jobID)
 
-				msg := fmt.Sprintf(`%s: {"a": 0}->{"after": {"a": 0, "b": "dog"}, "op": "c"%s}`, topic, sourceMsg)
-				if slices.Contains(tc.enrichedProperties, "schema") {
-					// TODO: make this more readable.
-					msg = fmt.Sprintf(`%s: {"payload": {"a": 0}}->{"payload": {"after": {"a": 0, "b": "dog"}, "op": "c"}, "schema": {"field": "topic_envelope", "fields": [{"field": "foo_after", "fields": [{"field": "a", "optional": true, "type": "int64"}, {"field": "b", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "source", "fields": [{"field": "changefeed_sink", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "ts_ns", "optional": true, "type": "int64"}, {"field": "op", "optional": true, "type": "string"}], "type": "struct"}}`, topic)
+				_ = sourceMsg // TODO
 
-				}
-
-				assertPayloadsEnvelopeStripTs(t, foo, changefeedbase.OptEnvelopeEnriched, []string{msg})
+				assertPayloadsEnvelopeStripTs(t, foo, changefeedbase.OptEnvelopeEnriched, []string{fmt.Sprintf(tc.expectedMsg, topic)})
 			}
 			supportedSinks := []string{"kafka", "pubsub", "sinkless", "webhook"}
 			for _, sink := range supportedSinks {
