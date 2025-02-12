@@ -29,7 +29,6 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/cockroach/pkg/util/timeutil"
 	"github.com/cockroachdb/errors"
-	"github.com/linkedin/goavro/v2"
 )
 
 const (
@@ -532,6 +531,7 @@ func inSet[S ~string](k S, set map[S]struct{}) bool {
 }
 
 func (e *jsonEncoder) makeSchema(updated, prev cdcevent.Row) (json.JSON, error) {
+	// TODO: cache me
 	opts := avro.EnvelopeOpts{
 		BeforeField:        e.beforeField,
 		AfterField:         true,
@@ -558,17 +558,8 @@ func (e *jsonEncoder) makeSchema(updated, prev cdcevent.Row) (json.JSON, error) 
 		}
 	}
 	if e.sourceField {
-		// TODO(#139689): This will be implemented by the source provider.
-		fields := []*avro.SchemaField{
-			{Name: "changefeed_sink", SchemaType: []avro.SchemaType{avro.SchemaTypeNull, avro.SchemaTypeString}},
-		}
-		sourceFn := func(row cdcevent.Row) (map[string]any, error) {
-			return map[string]any{
-				"changefeed_sink": goavro.Union(avro.SchemaTypeString, "kafka"),
-			}, nil
-
-		}
-		if source, err = avro.NewFunctionalRecord("source", "" /* namespace */, fields, sourceFn); err != nil {
+		source, err = e.enrichedEnvelopeSourceProvider.Schema()
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -592,9 +583,12 @@ func (e *jsonEncoder) initEnrichedEnvelope(ctx context.Context) error {
 	}
 
 	// TODO(#141001): only include the source if requested.
-	payloadKeys := []string{"after", "op", "ts_ns", "source"}
+	payloadKeys := []string{"after", "op", "ts_ns"}
 	if e.keyInValue {
 		payloadKeys = append(payloadKeys, "key")
+	}
+	if e.sourceField {
+		payloadKeys = append(payloadKeys, "source")
 	}
 	// TODO(#various): implement options for this envelope: before, key, topic, updated, mvcc_timestamp, ..
 	payloadBuilder, err := json.NewFixedKeysObjectBuilder(payloadKeys)
@@ -618,16 +612,19 @@ func (e *jsonEncoder) initEnrichedEnvelope(ctx context.Context) error {
 		if err := payloadBuilder.Set("op", json.FromString(string(deduceOp(updated, prev)))); err != nil {
 			return nil, err
 		}
-		sourceJson, err := e.enrichedEnvelopeSourceProvider.GetJSON(updated)
-		if err != nil {
-			return nil, err
-		}
-		if err := payloadBuilder.Set("source", sourceJson); err != nil {
-			return nil, err
-		}
 
 		if e.keyInValue {
 			if err := ve.encodeKeyInValue(ctx, updated, payloadBuilder); err != nil {
+				return nil, err
+			}
+		}
+
+		if e.sourceField {
+			sourceJson, err := e.enrichedEnvelopeSourceProvider.GetJSON(updated)
+			if err != nil {
+				return nil, err
+			}
+			if err := payloadBuilder.Set("source", sourceJson); err != nil {
 				return nil, err
 			}
 		}
@@ -645,7 +642,6 @@ func (e *jsonEncoder) initEnrichedEnvelope(ctx context.Context) error {
 			return nil, err
 		}
 
-		// TODO: cache me
 		// TODO: do this for the key too
 		schema, err := e.makeSchema(updated, prev)
 		if err != nil {

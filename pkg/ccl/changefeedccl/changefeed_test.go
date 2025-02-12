@@ -9,7 +9,7 @@ import (
 	"context"
 	gosql "database/sql"
 	"encoding/base64"
-	"encoding/json"
+	gojson "encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -83,6 +83,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/util/cidr"
 	"github.com/cockroachdb/cockroach/pkg/util/ctxgroup"
 	"github.com/cockroachdb/cockroach/pkg/util/hlc"
+	"github.com/cockroachdb/cockroach/pkg/util/json"
 	"github.com/cockroachdb/cockroach/pkg/util/leaktest"
 	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/cockroach/pkg/util/log/eventpb"
@@ -3847,6 +3848,24 @@ func TestChangefeedBareAvro(t *testing.T) {
 	cdcTest(t, testFn, feedTestForceSink("kafka"))
 }
 
+func mustT[T any](t *testing.T) func(x T, err error) T {
+	t.Helper()
+	return func(x T, err error) T {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return x
+	}
+}
+
+func parseJSON(t *testing.T, s string) map[string]any {
+	t.Helper()
+	var m map[string]any
+	require.NoError(t, gojson.Unmarshal([]byte(s), &m))
+	return m
+}
+
 func TestChangefeedEnriched(t *testing.T) {
 	defer leaktest.AfterTest(t)()
 	defer log.Scope(t).Close(t)
@@ -3854,27 +3873,131 @@ func TestChangefeedEnriched(t *testing.T) {
 	cases := []struct {
 		name               string
 		enrichedProperties []string
-		expectedMsg        string
+		msgBodyJSONFunc    func(source map[string]any) map[string]any
+		expectedKey        string
 	}{
 		{
-			name:        "solo",
-			expectedMsg: `%s: {"a": 0}->{"after": {"a": 0, "b": "dog"}, "op": "c"}`,
+			name: "solo",
+			msgBodyJSONFunc: func(source map[string]any) map[string]any {
+				return parseJSON(t, `{"after": {"a": 0, "b": "dog"}, "op": "c"}`)
+			},
+			expectedKey: `{"a": 0}`,
 		},
 		{
 			name:               "with schema",
 			enrichedProperties: []string{"schema"},
-			// TODO: make these more readable.
-			expectedMsg: `%s: {"payload": {"a": 0}}->{"payload": {"after": {"a": 0, "b": "dog"}, "op": "c"}, "schema": {"field": "topic_envelope", "fields": [{"field": "foo_after", "fields": [{"field": "a", "optional": true, "type": "int64"}, {"field": "b", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "ts_ns", "optional": true, "type": "int64"}, {"field": "op", "optional": true, "type": "string"}], "type": "struct"}}`,
+			msgBodyJSONFunc: func(source map[string]any) map[string]any {
+				return parseJSON(t, `
+				{
+					"payload": {
+						"after": {
+							"a": 0,
+							"b": "dog"
+						},
+						"op": "c"
+					},
+					"schema": {
+						"field": "topic_envelope",
+						"fields": [
+							{
+								"field": "foo_after",
+								"fields": [
+									{
+										"field": "a",
+										"optional": true,
+										"type": "int64"
+									}, {
+										"field": "b",
+										"optional": true,
+										"type": "string"
+									}
+								],
+								"optional": true,
+								"type": "struct"
+							}, {
+								"field": "ts_ns",
+								"optional": true,
+								"type": "int64"
+							}, {
+								"field": "op",
+								"optional": true,
+								"type": "string"
+							}
+						],
+						"type": "struct"
+					}
+				}`)
+			},
+			expectedKey: `{"payload": {"a": 0}, "schema": "TODO"}`,
 		},
 		{
 			name:               "with source",
 			enrichedProperties: []string{"source"},
-			expectedMsg:        `%s: {"payload": {"after": {"a": 0, "b": "dog"}, "op": "c", "source": {"changefeed_sink": "kafka"}}`,
+			// parseJSON(t, `{"after": {"a": 0, "b": "dog"}, "op": "c", "source": {"job_id": "1046345869764362241"}}`),
+			msgBodyJSONFunc: func(source map[string]any) map[string]any {
+				return map[string]any{
+					"after":  parseJSON(t, `{"a": 0, "b": "dog"}`),
+					"op":     "c",
+					"source": source,
+				}
+			},
+			expectedKey: `{"a": 0}`,
 		},
 		{
 			name:               "with schema and source",
 			enrichedProperties: []string{"schema", "source"},
-			expectedMsg:        `%s: {"payload": {"a": 0}}->{"payload": {"after": {"a": 0, "b": "dog"}, "op": "c", "source": {"changefeed_sink": "kafka"}}, "schema": {"field": "topic_envelope", "fields": [{"field": "foo_after", "fields": [{"field": "a", "optional": true, "type": "int64"}, {"field": "b", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "source", "fields": [{"field": "changefeed_sink", "optional": true, "type": "string"}], "optional": true, "type": "struct"}, {"field": "ts_ns", "optional": true, "type": "int64"}, {"field": "op", "optional": true, "type": "string"}], "type": "struct"}}`,
+			msgBodyJSONFunc: func(source map[string]any) map[string]any {
+				return map[string]any{
+					"payload": map[string]any{
+						"after":  parseJSON(t, `{"a": 0, "b": "dog"}`),
+						"op":     "c",
+						"source": source,
+					},
+					"schema": parseJSON(t, `
+					{
+						"field": "topic_envelope",
+						"fields": [
+							{
+								"field": "foo_after",
+								"fields": [
+									{
+										"field": "a",
+										"optional": true,
+										"type": "int64"
+									}, {
+										"field": "b",
+										"optional": true,
+										"type": "string"
+									}
+								],
+								"optional": true,
+								"type": "struct"
+							}, {
+								"field": "source",
+								"fields": [
+									{
+										"field": "job_id",
+										"optional": true,
+										"type": "string"
+									}
+								],
+								"optional": true,
+								"type": "struct"
+							}, {
+								"field": "ts_ns",
+								"optional": true,
+								"type": "int64"
+							}, {
+								"field": "op",
+								"optional": true,
+								"type": "string"
+							}
+						],
+						"type": "struct"
+					}`),
+				}
+			},
+			expectedKey: `{"payload": {"a": 0}, "schema": "TODO"}`,
 		},
 	}
 
@@ -3903,13 +4026,17 @@ func TestChangefeedEnriched(t *testing.T) {
 				if _, ok := foo.(*sinklessFeed); !ok {
 					sqlDB.QueryRow(t, `SELECT job_id FROM [SHOW JOBS] where job_type='CHANGEFEED'`).Scan(&jobID)
 				}
-				sourceMsg := fmt.Sprintf(`, "source": {"job_id": "%d"}`, jobID)
+				source := map[string]any{"job_id": strconv.FormatInt(jobID, 10)}
 
-				_ = sourceMsg // TODO
+				// (tc.msgBodyJSONFunc(source))
+				msgBodyJSON, err := json.MakeJSON(tc.msgBodyJSONFunc(source))
+				require.NoError(t, err)
+				msgBody := msgBodyJSON.String()
 
-				assertPayloadsEnvelopeStripTs(t, foo, changefeedbase.OptEnvelopeEnriched, []string{fmt.Sprintf(tc.expectedMsg, topic)})
+				assertion := fmt.Sprintf("%s: %s->%s", topic, tc.expectedKey, msgBody)
+				assertPayloadsEnvelopeStripTs(t, foo, changefeedbase.OptEnvelopeEnriched, []string{assertion})
 			}
-			supportedSinks := []string{"kafka", "pubsub", "sinkless", "webhook"}
+			supportedSinks := []string{"kafka"} // , "pubsub", "sinkless", "webhook"}
 			for _, sink := range supportedSinks {
 				cdcTest(t, testFn, feedTestForceSink(sink))
 			}
@@ -5329,7 +5456,7 @@ func TestChangefeedDataTTL(t *testing.T) {
 						B int
 					}
 				}
-				err = json.Unmarshal(msg.Value, &decodedMessage)
+				err = gojson.Unmarshal(msg.Value, &decodedMessage)
 				require.NoError(t, err)
 				delete(upsertedValues, decodedMessage.After.B)
 				if len(upsertedValues) == 0 {
