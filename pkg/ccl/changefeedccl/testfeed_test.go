@@ -1488,10 +1488,12 @@ func (c *cloudFeed) readParquetResolvedPayload(path string) ([]byte, error) {
 
 // Next implements the TestFeed interface.
 func (c *cloudFeed) Next() (*cdctest.TestFeedMessage, error) {
+	fmt.Println("cloud feed NEXT")
 	for {
 		if len(c.rows) > 0 {
 			e := c.rows[0]
 			c.rows = c.rows[1:]
+			fmt.Println("next is this", e.String())
 			return e, nil
 		}
 

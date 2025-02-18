@@ -569,6 +569,7 @@ func (s *cloudStorageSink) EmitRow(
 			retErr = errors.CombineErrors(retErr, s.closeAllCodecs())
 		}
 	}()
+	fmt.Println("Emit row")
 
 	s.metrics.recordMessageSize(int64(len(key) + len(value)))
 	file, err := s.getOrCreateFile(topic, mvcc)

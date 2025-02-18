@@ -164,6 +164,8 @@ func (v *orderValidator) NoteRow(
 		))
 	}
 	latestResolved := v.resolved[partition]
+
+	fmt.Println("latestResolved", latestResolved, "updated", updated)
 	if updated.Less(latestResolved) {
 		v.failures = append(v.failures, fmt.Sprintf(
 			`topic %s partition %s: saw new row timestamp %s after %s was resolved %s %s`,
@@ -182,6 +184,7 @@ func (v *orderValidator) NoteRow(
 
 // NoteResolved implements the Validator interface.
 func (v *orderValidator) NoteResolved(partition string, resolved hlc.Timestamp) error {
+	fmt.Println("Noting resolved", resolved)
 	prev := v.resolved[partition]
 	if prev.Less(resolved) {
 		v.resolved[partition] = resolved
