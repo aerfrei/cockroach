@@ -810,6 +810,7 @@ func (ca *changeAggregator) tick() error {
 		a := event.DetachAlloc()
 		a.Release(ca.Ctx())
 		resolved := event.Resolved()
+		fmt.Println("changeAggregator: noting resolved event", resolved.String())
 		if ca.knobs.FilterSpanWithMutation != nil {
 			shouldFilter, err := ca.knobs.FilterSpanWithMutation(&resolved)
 			if err != nil {

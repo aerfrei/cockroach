@@ -1457,6 +1457,7 @@ func (c *cloudFeed) appendParquetTestFeedMessages(
 			continue
 		}
 
+		// doing it for parquet
 		c.rows = append(c.rows, m)
 	}
 
@@ -1488,12 +1489,12 @@ func (c *cloudFeed) readParquetResolvedPayload(path string) ([]byte, error) {
 
 // Next implements the TestFeed interface.
 func (c *cloudFeed) Next() (*cdctest.TestFeedMessage, error) {
-	fmt.Println("cloud feed NEXT")
 	for {
 		if len(c.rows) > 0 {
+			fmt.Println("cloud test feed rows", c.rows)
 			e := c.rows[0]
 			c.rows = c.rows[1:]
-			fmt.Println("next is this", e.String())
+			fmt.Println("cloud test popped a row", c.rows)
 			return e, nil
 		}
 
@@ -1520,6 +1521,7 @@ func (c *cloudFeed) Next() (*cdctest.TestFeedMessage, error) {
 }
 
 func (c *cloudFeed) walkDir(path string, d fs.DirEntry, err error) error {
+	fmt.Println("cloud test feed walkDir found:", path)
 	if strings.HasSuffix(path, `.tmp`) {
 		// File in the process of being written by ExternalStorage. Ignore.
 		return nil
@@ -1577,6 +1579,8 @@ func (c *cloudFeed) walkDir(path string, d fs.DirEntry, err error) error {
 		}
 
 		resolvedEntry := &cdctest.TestFeedMessage{Resolved: resolvedPayload}
+		// appending resolved here
+		fmt.Println("walkdir appending resolved to test cloudfeed rows", c.rows, resolvedEntry)
 		c.rows = append(c.rows, resolvedEntry)
 		c.resolved = path
 		return nil
@@ -1634,8 +1638,11 @@ func (c *cloudFeed) walkDir(path string, d fs.DirEntry, err error) error {
 				continue
 			}
 			m.Resolved = nil
+			// appending here
+			fmt.Println("walkdir appending to test cloudfeed rows", c.rows, m)
 			c.rows = append(c.rows, m)
 		case changefeedbase.OptFormatCSV:
+			fmt.Println("walkdir appending csv row to test cloudfeed rows", c.rows, m)
 			c.rows = append(c.rows, m)
 		default:
 			return errors.Errorf(`unknown %s: %s`, changefeedbase.OptFormat, format)

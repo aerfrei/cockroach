@@ -7,6 +7,7 @@ package changefeedccl
 
 import (
 	"context"
+	"fmt"
 	"hash"
 	"hash/crc32"
 	"runtime"
@@ -312,6 +313,7 @@ func (c *kvEventToRowConsumer) topicForEvent(eventMeta cdcevent.Metadata) (Topic
 
 // ConsumeEvent manages kv event lifetime: parsing, encoding and event being emitted to the sink.
 func (c *kvEventToRowConsumer) ConsumeEvent(ctx context.Context, ev kvevent.Event) error {
+	fmt.Println("changeAggregator: kvEventToRowConsumer consuming event ", ev.String(), ev.KV().Value)
 	if ev.Type() != kvevent.TypeKV {
 		return errors.AssertionFailedf("expected kv ev, got %v", ev.Type())
 	}

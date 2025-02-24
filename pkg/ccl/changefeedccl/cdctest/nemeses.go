@@ -602,33 +602,35 @@ func (ns *nemeses) nextEvent(
 			continue
 		}
 		if _, ok := event.(eventFeedMessage); ok {
-			fmt.Println("event feed message")
 			// If there are no available rows, openTxn or commit outstanding txn instead
 			// of reading.
 			if ns.availableRows < 1 {
-				fmt.Println("openTxn or commit outstanding txn instead")
 				s := state.(stateRunning)
 				if s.TxnOpen.Get() {
+					//fmt.Println("Commit event")
 					return eventCommit{}, noPayload, nil
 				}
 				payload, err := newOpenTxnPayload(ns)
 				if err != nil {
+					//fmt.Println("open transaction error event")
 					return eventOpenTxn{}, noPayload, err
 				}
+				//fmt.Println("open transaction event")
 				return eventOpenTxn{}, payload, nil
 			}
+
+			//fmt.Println("feed message event")
 			return eventFeedMessage{}, noPayload, nil
 		}
 		if _, ok := event.(eventOpenTxn); ok {
-			fmt.Println("open txc")
 			payload, err := newOpenTxnPayload(ns)
 			if err != nil {
 				return eventOpenTxn{}, noPayload, err
 			}
+			//fmt.Println("open transaction event")
 			return eventOpenTxn{}, payload, nil
 		}
 		if e, ok := event.(eventAddColumn); ok {
-			fmt.Println("adding column")
 			e.CanAddColumnAfter = fsm.FromBool(ns.currentTestColumnCount < ns.maxTestColumnCount-1)
 			payload := addColumnPayload{}
 			if ns.enumCount > 0 && rng.Intn(4) < 1 {
@@ -640,7 +642,6 @@ func (ns *nemeses) nextEvent(
 			return e, payload, nil
 		}
 		if e, ok := event.(eventRemoveColumn); ok {
-			fmt.Println("removing column")
 			e.CanRemoveColumnAfter = fsm.FromBool(ns.currentTestColumnCount > 1)
 			return e, noPayload, nil
 		}
@@ -1032,6 +1033,7 @@ func removeColumn(a fsm.Args) error {
 }
 
 func noteFeedMessage(a fsm.Args) error {
+	// CONFIRM: does this respect order?
 	ns := a.Extended.(*nemeses)
 
 	if ns.availableRows <= 0 {

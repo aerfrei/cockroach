@@ -136,6 +136,7 @@ func (v *orderValidator) GetValuesForKeyBelowTimestamp(
 func (v *orderValidator) NoteRow(
 	partition, key, value string, updated hlc.Timestamp, topic string,
 ) error {
+	fmt.Println("Noting row in order validator:", partition, topic, key, value, updated.String())
 	if prev, ok := v.partitionForKey[key]; ok && prev != partition {
 		v.failures = append(v.failures, fmt.Sprintf(
 			`key [%s] received on two partitions: %s and %s`, key, prev, partition,
@@ -165,7 +166,6 @@ func (v *orderValidator) NoteRow(
 	}
 	latestResolved := v.resolved[partition]
 
-	fmt.Println("latestResolved", latestResolved, "updated", updated)
 	if updated.Less(latestResolved) {
 		v.failures = append(v.failures, fmt.Sprintf(
 			`topic %s partition %s: saw new row timestamp %s after %s was resolved %s %s`,
@@ -184,7 +184,7 @@ func (v *orderValidator) NoteRow(
 
 // NoteResolved implements the Validator interface.
 func (v *orderValidator) NoteResolved(partition string, resolved hlc.Timestamp) error {
-	fmt.Println("Noting resolved", resolved)
+	fmt.Println("Noting resolved in order validator:", partition, resolved.String())
 	prev := v.resolved[partition]
 	if prev.Less(resolved) {
 		v.resolved[partition] = resolved

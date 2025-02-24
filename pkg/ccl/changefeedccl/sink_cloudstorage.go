@@ -99,6 +99,7 @@ func (f *cloudStorageSinkFile) adjustBytesToTarget(ctx context.Context, targetBy
 var _ io.Writer = &cloudStorageSinkFile{}
 
 func (f *cloudStorageSinkFile) Write(p []byte) (int, error) {
+	fmt.Println(fmt.Sprintf("writing %s", p))
 	f.rawSize += len(p)
 	if f.codec != nil {
 		return f.codec.Write(p)
@@ -549,6 +550,7 @@ func (s *cloudStorageSink) EmitRow(
 	updated, mvcc hlc.Timestamp,
 	alloc kvevent.Alloc,
 ) (retErr error) {
+	fmt.Println(fmt.Sprintf("Sink: Emit row %s:%s", key, value))
 	if s.files == nil {
 		return errors.New(`cannot EmitRow on a closed sink`)
 	}
@@ -569,7 +571,6 @@ func (s *cloudStorageSink) EmitRow(
 			retErr = errors.CombineErrors(retErr, s.closeAllCodecs())
 		}
 	}()
-	fmt.Println("Emit row")
 
 	s.metrics.recordMessageSize(int64(len(key) + len(value)))
 	file, err := s.getOrCreateFile(topic, mvcc)
@@ -599,6 +600,7 @@ func (s *cloudStorageSink) EmitRow(
 func (s *cloudStorageSink) EmitResolvedTimestamp(
 	ctx context.Context, encoder Encoder, resolved hlc.Timestamp,
 ) error {
+	fmt.Println(fmt.Sprintf("Sink: Emit resolved timestamp %s", resolved.String()))
 	// TODO: There should be a better way to check if the sink is closed.
 	if s.files == nil {
 		return errors.New(`cannot EmitRow on a closed sink`)
@@ -622,6 +624,7 @@ func (s *cloudStorageSink) EmitResolvedTimestamp(
 
 	part := resolved.GoTime().Format(s.partitionFormat)
 	filename := fmt.Sprintf(`%s.RESOLVED`, cloudStorageFormatTime(resolved))
+	fmt.Printf("writing file %s %s\n", filename, resolved.AsOfSystemTime())
 	if log.V(1) {
 		log.Infof(ctx, "writing file %s %s", filename, resolved.AsOfSystemTime())
 	}
@@ -690,6 +693,7 @@ func (s *cloudStorageSink) Flush(ctx context.Context) error {
 	if s.files == nil {
 		return errors.New(`cannot Flush on a closed sink`)
 	}
+	fmt.Println("Flush")
 
 	s.metrics.recordFlushRequestCallback()()
 
