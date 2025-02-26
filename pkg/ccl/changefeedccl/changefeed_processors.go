@@ -900,6 +900,7 @@ func (ca *changeAggregator) noteResolvedSpan(resolved jobspb.ResolvedSpan) (retu
 
 // flushFrontier flushes sink and emits resolved spans to the change frontier.
 func (ca *changeAggregator) flushFrontier() error {
+	fmt.Println("changeAggregator: flushing frontier")
 	// Make sure to flush the sink before forwarding resolved spans,
 	// otherwise, we could lose buffered messages and violate the
 	// at-least-once guarantee. This is also true for checkpointing the
@@ -1607,6 +1608,7 @@ func (cf *changeFrontier) noteAggregatorProgress(d rowenc.EncDatum) error {
 }
 
 func (cf *changeFrontier) forwardFrontier(resolved jobspb.ResolvedSpan) error {
+	fmt.Println("frontier forwarding", resolved.String())
 	frontierChanged, err := cf.frontier.ForwardResolvedSpan(cf.Ctx(), resolved)
 	if err != nil {
 		return err
@@ -1877,6 +1879,7 @@ func (cf *changeFrontier) maybeEmitResolved(newResolved hlc.Timestamp) error {
 	if !shouldEmit {
 		return nil
 	}
+	fmt.Println("change frontier emitting resolved timestamp", newResolved.String())
 	if err := emitResolvedTimestamp(cf.Ctx(), cf.encoder, cf.sink, newResolved); err != nil {
 		return err
 	}

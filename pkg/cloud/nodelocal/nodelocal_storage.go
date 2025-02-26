@@ -105,6 +105,7 @@ func MakeLocalStorageURI(path string) string {
 func makeLocalFileStorage(
 	ctx context.Context, args cloud.ExternalStorageContext, dest cloudpb.ExternalStorage,
 ) (cloud.ExternalStorage, error) {
+	fmt.Println("makeLocalFileStorage, local file")
 	telemetry.Count("external-io.nodelocal")
 	if args.BlobClientFactory == nil {
 		return nil, errors.New("nodelocal storage is not available")

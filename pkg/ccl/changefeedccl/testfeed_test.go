@@ -1523,8 +1523,9 @@ func (c *cloudFeed) Next() (*cdctest.TestFeedMessage, error) {
 func (c *cloudFeed) walkDir(path string, d fs.DirEntry, err error) error {
 	fmt.Println("cloud test feed walkDir found:", path)
 	if strings.HasSuffix(path, `.tmp`) {
-		// File in the process of being written by ExternalStorage. Ignore.
-		return nil
+		// File in the process of being written by ExternalStorage.
+		// Ignore this file and stop traversing.
+		return filepath.SkipAll
 	}
 
 	if strings.Contains(path, "crdb_external_storage_location") {

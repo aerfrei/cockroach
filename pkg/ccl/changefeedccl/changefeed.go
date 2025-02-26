@@ -8,6 +8,7 @@ package changefeedccl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/cockroachdb/cockroach/pkg/ccl/changefeedccl/changefeedbase"
 	"github.com/cockroachdb/cockroach/pkg/cloud"
@@ -88,6 +89,7 @@ const (
 func emitResolvedTimestamp(
 	ctx context.Context, encoder Encoder, sink ResolvedTimestampSink, resolved hlc.Timestamp,
 ) error {
+	fmt.Println("emitResolvedTimestamp for changefeed")
 	// TODO(dan): Emit more fine-grained (table level) resolved
 	// timestamps.
 	if err := sink.EmitResolvedTimestamp(ctx, encoder, resolved); err != nil {

@@ -409,6 +409,7 @@ func parseS3URL(uri *url.URL) (cloudpb.ExternalStorage, error) {
 func MakeS3Storage(
 	ctx context.Context, args cloud.EarlyBootExternalStorageContext, dest cloudpb.ExternalStorage,
 ) (cloud.ExternalStorage, error) {
+	fmt.Println("making s3 external storage")
 	telemetry.Count("external-io.s3")
 	conf := dest.S3Config
 	if conf == nil {

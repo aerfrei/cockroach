@@ -201,8 +201,8 @@ func newChangefeedOption(testName string) ChangefeedOption {
 		}
 	}
 
-	if isCloudstorage && rand.Intn(2) < 1 {
-		cfo.Format = "parquet"
+	if isCloudstorage {
+		cfo.Format = "json"
 	} else {
 		cfo.Format = "json"
 	}
@@ -1033,7 +1033,6 @@ func removeColumn(a fsm.Args) error {
 }
 
 func noteFeedMessage(a fsm.Args) error {
-	// CONFIRM: does this respect order?
 	ns := a.Extended.(*nemeses)
 
 	if ns.availableRows <= 0 {

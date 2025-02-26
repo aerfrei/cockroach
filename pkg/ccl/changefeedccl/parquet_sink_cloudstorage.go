@@ -127,6 +127,7 @@ func (parquetSink *parquetCloudStorageSink) Dial() error {
 func (parquetSink *parquetCloudStorageSink) EmitResolvedTimestamp(
 	ctx context.Context, _ Encoder, resolved hlc.Timestamp,
 ) (err error) {
+	fmt.Println("parquet sink cloudstorage: EmitResolvedTimestamp", resolved)
 	// TODO: There should be a better way to check if the sink is closed.
 	// This is copied from the wrapped sink's EmitResolvedTimestamp()
 	// method.
@@ -136,8 +137,11 @@ func (parquetSink *parquetCloudStorageSink) EmitResolvedTimestamp(
 
 	defer parquetSink.wrapped.metrics.recordResolvedCallback()()
 
+	fmt.Println("parquet sink cloudstorage: EmitResolvedTimestamp waiting for flush", resolved)
 	if err := parquetSink.wrapped.waitAsyncFlush(ctx); err != nil {
 		return errors.Wrapf(err, "while emitting resolved timestamp")
+	} else {
+		fmt.Println("parquet sink cloudstorage: EmitResolvedTimestamp finished with no errors", resolved)
 	}
 
 	var buf bytes.Buffer
@@ -187,6 +191,7 @@ func (parquetSink *parquetCloudStorageSink) EncodeAndEmitRow(
 	encodingOpts changefeedbase.EncodingOptions,
 	alloc kvevent.Alloc,
 ) error {
+	fmt.Println("parquet sink cloudstorage: EncodeAndEmitRow", updatedRow.DebugString(), updated.String())
 	s := parquetSink.wrapped
 	file, err := s.getOrCreateFile(topic, mvcc)
 	if err != nil {
@@ -204,6 +209,7 @@ func (parquetSink *parquetCloudStorageSink) EncodeAndEmitRow(
 		}
 	}
 
+	fmt.Println("parquet sink cloudstorage: EncodeAndEmitRow: about to add data", updated.String())
 	if err := file.parquetCodec.addData(updatedRow, prevRow, updated, mvcc); err != nil {
 		return err
 	}
@@ -218,9 +224,12 @@ func (parquetSink *parquetCloudStorageSink) EncodeAndEmitRow(
 	// parquet writer can compress more bits into a small size. 1MB is small
 	// enough that we won't overshoot s.targetMaxFileSize by an excessive amount.
 	if file.parquetCodec.estimatedBufferedBytes() > 1<<20 {
+		fmt.Println("parquet sink cloudstorage: EncodeAndEmitRow: about to flush", updated.String())
 		if err := file.parquetCodec.flush(); err != nil {
 			return err
 		}
+	} else {
+		fmt.Println("parquet sink cloudstorage: EncodeAndEmitRow: not flush", updated.String())
 	}
 	bufferedBytesEstimate := file.parquetCodec.estimatedBufferedBytes()
 
@@ -229,6 +238,11 @@ func (parquetSink *parquetCloudStorageSink) EncodeAndEmitRow(
 	prevAllocSize := file.alloc.Bytes()
 	newAllocSize := int64(file.buf.Len()) + bufferedBytesEstimate
 	file.adjustBytesToTarget(ctx, newAllocSize)
+
+	fmt.Println("parquet sink cloudstorage: EncodeAndEmitRow:",
+		fmt.Sprintf("topic: %d/%d, written: %d, buffered %d, new alloc: %d, old alloc: %d",
+			topic.GetTopicIdentifier().TableID, topic.GetTopicIdentifier().FamilyID, int64(file.buf.Len()),
+			bufferedBytesEstimate, prevAllocSize, newAllocSize))
 
 	if log.V(1) && parquetSink.everyN.ShouldLog() {
 		log.Infof(ctx, "topic: %d/%d, written: %d, buffered %d, new alloc: %d, old alloc: %d",

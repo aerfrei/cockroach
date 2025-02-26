@@ -219,6 +219,7 @@ func (s *batchingSink) EmitRow(
 func (s *batchingSink) EmitResolvedTimestamp(
 	ctx context.Context, encoder Encoder, resolved hlc.Timestamp,
 ) error {
+	fmt.Println("Batching sink: EmitResolvedTimestamp")
 	data, err := encoder.EncodeResolvedTimestamp(ctx, "", resolved)
 	if err != nil {
 		return err

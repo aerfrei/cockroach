@@ -8,6 +8,7 @@ package gcp
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"net/url"
 	"path"
@@ -129,6 +130,7 @@ func (g *gcsStorage) Settings() *cluster.Settings {
 func makeGCSStorage(
 	ctx context.Context, args cloud.EarlyBootExternalStorageContext, dest cloudpb.ExternalStorage,
 ) (cloud.ExternalStorage, error) {
+	fmt.Println("making gcs storage")
 	telemetry.Count("external-io.google_cloud")
 	conf := dest.GoogleCloudConfig
 	if conf == nil {

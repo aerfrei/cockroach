@@ -486,9 +486,11 @@ func makeCloudStorageSink(
 		}
 	}
 
+	fmt.Println("making externalStorage es with", u.String())
 	// We make the external storage with a nil IOAccountingInterceptor since we
 	// record usage metrics via s.metrics.
 	s.es, err = makeExternalStorageFromURI(ctx, u.String(), user, cloud.WithIOAccountingInterceptor(nil), cloud.WithClientName("cdc"))
+	fmt.Println("making externalStorage es with conf", s.es.Conf().Provider)
 	if err != nil {
 		return nil, err
 	}
@@ -759,6 +761,7 @@ func (s *cloudStorageSink) waitAsyncFlush(ctx context.Context) error {
 	case <-s.asyncFlushTermCh:
 		return s.asyncFlushErr
 	case <-done:
+		fmt.Println("we've successfully flushed async flush")
 		return nil
 	}
 }
@@ -768,6 +771,7 @@ var logQueueDepth = log.Every(30 * time.Second)
 // flushFile flushes file to the cloud storage.
 // file should not be used after flushing.
 func (s *cloudStorageSink) flushFile(ctx context.Context, file *cloudStorageSinkFile) error {
+	fmt.Println(fmt.Sprintf("Sink: Flushing file"))
 	asyncFlushEnabled := enableAsyncFlush.Get(&s.settings.SV)
 	if s.asyncFlushActive && !asyncFlushEnabled {
 		// Async flush behavior was turned off --  drain any active flush requests
@@ -807,7 +811,10 @@ func (s *cloudStorageSink) flushFile(ctx context.Context, file *cloudStorageSink
 	dest := filepath.Join(s.dataFilePartition, filename)
 
 	if !asyncFlushEnabled {
+		fmt.Println(fmt.Sprintf("Sink: sync Flushing file"))
 		return file.flushToStorage(ctx, s.es, dest, s.metrics)
+	} else {
+		fmt.Println(fmt.Sprintf("Sink: I guess we're async Flushing file", file))
 	}
 
 	// Try to submit flush request, but produce warning message
@@ -820,6 +827,7 @@ func (s *cloudStorageSink) flushFile(ctx context.Context, file *cloudStorageSink
 	case s.asyncFlushCh <- flushRequest{file: file, dest: dest}:
 		return nil
 	default:
+		fmt.Println(fmt.Sprintf("Sink: async Flushing file %s queue is full", file))
 		if logQueueDepth.ShouldLog() {
 			log.Infof(ctx, "changefeed flush queue is full; ~%d bytes to flush",
 				flushQueueDepth*s.targetMaxFileSize)
@@ -881,6 +889,7 @@ func (f *cloudStorageSinkFile) flushToStorage(
 ) error {
 	defer f.releaseAlloc(ctx)
 	defer m.timers().DownstreamClientSend.Start()()
+	fmt.Println("flushToStorage", dest, f.buf.String())
 
 	if f.rawSize == 0 {
 		// This method shouldn't be called with an empty file, but be defensive
@@ -898,6 +907,7 @@ func (f *cloudStorageSinkFile) flushToStorage(
 	if err := cloud.WriteFile(ctx, es, dest, bytes.NewReader(f.buf.Bytes())); err != nil {
 		return err
 	}
+	fmt.Println("flushToStorage finished for ", dest)
 	m.recordEmittedBatch(f.created, f.numMessages, f.oldestMVCC, f.rawSize, compressedBytes)
 
 	return nil
