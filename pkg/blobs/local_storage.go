@@ -7,11 +7,13 @@ package blobs
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/blobs/blobspb"
 	"github.com/cockroachdb/cockroach/pkg/util/fileutil"
@@ -88,6 +90,8 @@ func (l localWriter) Close() error {
 		return err
 	}
 	// Finally put the file to its final location.
+
+	fmt.Println("local file closing and moving:", l.dest, time.Now().String())
 	return errors.Wrapf(
 		fileutil.Move(l.tmp, l.dest),
 		"moving temporary file to final location %q",
@@ -119,7 +123,9 @@ func (l *LocalStorage) Writer(ctx context.Context, filename string) (io.WriteClo
 	//   exotic edge cases, hence the use fileutil.Move below.)
 	// See the explanatory comment for os.CreateTemp to understand
 	// what the "*" in the suffix means.
+	//
 	tmpFile, err := os.CreateTemp(targetDir, filepath.Base(fullPath)+"*.tmp")
+	//
 	if err != nil {
 		return nil, errors.Wrap(err, "creating temporary file")
 	}

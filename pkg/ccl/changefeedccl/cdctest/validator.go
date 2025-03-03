@@ -23,6 +23,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/sql/types"
 	"github.com/cockroachdb/cockroach/pkg/util/hlc"
 	"github.com/cockroachdb/cockroach/pkg/util/json"
+	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/errors"
 	"github.com/lib/pq/oid"
 )
@@ -136,6 +137,7 @@ func (v *orderValidator) GetValuesForKeyBelowTimestamp(
 func (v *orderValidator) NoteRow(
 	partition, key, value string, updated hlc.Timestamp, topic string,
 ) error {
+	log.Infof(context.Background(), `Noting row %s`, updated.String())
 	if prev, ok := v.partitionForKey[key]; ok && prev != partition {
 		v.failures = append(v.failures, fmt.Sprintf(
 			`key [%s] received on two partitions: %s and %s`, key, prev, partition,
@@ -182,6 +184,7 @@ func (v *orderValidator) NoteRow(
 
 // NoteResolved implements the Validator interface.
 func (v *orderValidator) NoteResolved(partition string, resolved hlc.Timestamp) error {
+	log.Infof(context.Background(), `Noting resolved %s`, resolved.String())
 	prev := v.resolved[partition]
 	if prev.Less(resolved) {
 		v.resolved[partition] = resolved

@@ -6,7 +6,9 @@
 package fileutil
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/util/sysutil"
 	"github.com/cockroachdb/errors"
@@ -17,14 +19,18 @@ import (
 // If the target file already exists, it is truncated.
 // If the move fails, then the target file may be left in an inconsistent state.
 func Move(oldPath, newPath string) error {
+	fmt.Println("moving", oldPath, newPath, time.Now().String())
 	err := os.Rename(oldPath, newPath)
 	if !isCrossDeviceLinkError(err) {
+		fmt.Println("moved", oldPath, newPath, err, time.Now().String())
 		return err
 	}
 
 	if err = CopyFile(oldPath, newPath); err != nil {
 		return err
 	}
+
+	fmt.Println("moving across filesystems", oldPath, newPath, time.Now().String())
 
 	return os.RemoveAll(oldPath)
 }

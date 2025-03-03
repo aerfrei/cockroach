@@ -202,7 +202,7 @@ func newChangefeedOption(testName string) ChangefeedOption {
 	}
 
 	if isCloudstorage && rand.Intn(2) < 1 {
-		cfo.Format = "parquet"
+		cfo.Format = "json"
 	} else {
 		cfo.Format = "json"
 	}

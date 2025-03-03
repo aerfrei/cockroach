@@ -416,6 +416,7 @@ func (s *backgroundPipe) Close() error {
 // WriteFile is a helper for writing the content of a Reader to the given path
 // of an ExternalStorage.
 func WriteFile(ctx context.Context, dest ExternalStorage, basename string, src io.Reader) error {
+	log.Infof(ctx, `cloud io writing file %s`, basename)
 	var span *tracing.Span
 	ctx, span = tracing.ChildSpan(ctx, fmt.Sprintf("%s.WriteFile", dest.Conf().Provider.String()))
 	defer span.Finish()
@@ -433,5 +434,6 @@ func WriteFile(ctx context.Context, dest ExternalStorage, basename string, src i
 		cancel()
 		return errors.CombineErrors(w.Close(), err)
 	}
+	log.Infof(ctx, `cloud io finished copying to file %s`, basename)
 	return errors.Wrap(w.Close(), "closing object")
 }

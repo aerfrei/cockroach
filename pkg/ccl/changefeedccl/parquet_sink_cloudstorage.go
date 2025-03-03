@@ -127,6 +127,7 @@ func (parquetSink *parquetCloudStorageSink) Dial() error {
 func (parquetSink *parquetCloudStorageSink) EmitResolvedTimestamp(
 	ctx context.Context, _ Encoder, resolved hlc.Timestamp,
 ) (err error) {
+	log.Infof(ctx, "parquetCloudStorageSink emitting resolved timestamp %s", resolved.String())
 	// TODO: There should be a better way to check if the sink is closed.
 	// This is copied from the wrapped sink's EmitResolvedTimestamp()
 	// method.
@@ -187,6 +188,7 @@ func (parquetSink *parquetCloudStorageSink) EncodeAndEmitRow(
 	encodingOpts changefeedbase.EncodingOptions,
 	alloc kvevent.Alloc,
 ) error {
+	log.Infof(ctx, "parquetCloudStorageSink emitting row w timestamp %s", updated.String())
 	s := parquetSink.wrapped
 	file, err := s.getOrCreateFile(topic, mvcc)
 	if err != nil {

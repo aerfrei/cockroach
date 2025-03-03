@@ -147,6 +147,7 @@ func joinRelativePath(filePath string, file string) string {
 }
 
 func (l *localFileStorage) Writer(ctx context.Context, basename string) (io.WriteCloser, error) {
+	//
 	return l.blobClient.Writer(ctx, joinRelativePath(l.base, basename))
 }
 

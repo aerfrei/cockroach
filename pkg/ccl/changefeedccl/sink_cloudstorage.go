@@ -411,6 +411,8 @@ func makeCloudStorageSink(
 		return nil, err
 	}
 
+	fmt.Println(enableAsyncFlush.Get(&settings.SV), "enable async flush")
+
 	s := &cloudStorageSink{
 		srcID:             srcID,
 		sinkID:            sinkID,
@@ -549,6 +551,7 @@ func (s *cloudStorageSink) EmitRow(
 	updated, mvcc hlc.Timestamp,
 	alloc kvevent.Alloc,
 ) (retErr error) {
+	log.Infof(ctx, "cloudStorageSink emitting row w timestamp %s", updated.String())
 	if s.files == nil {
 		return errors.New(`cannot EmitRow on a closed sink`)
 	}
@@ -598,6 +601,7 @@ func (s *cloudStorageSink) EmitRow(
 func (s *cloudStorageSink) EmitResolvedTimestamp(
 	ctx context.Context, encoder Encoder, resolved hlc.Timestamp,
 ) error {
+	log.Infof(ctx, "cloudStorageSink emitting resolved timestamp %s", resolved.String())
 	// TODO: There should be a better way to check if the sink is closed.
 	if s.files == nil {
 		return errors.New(`cannot EmitRow on a closed sink`)
@@ -893,6 +897,8 @@ func (f *cloudStorageSinkFile) flushToStorage(
 	if err := cloud.WriteFile(ctx, es, dest, bytes.NewReader(f.buf.Bytes())); err != nil {
 		return err
 	}
+	_, size, er := es.ReadFile(ctx, dest, cloud.ReadOptions{})
+	log.Infof(ctx, `flushToStorage finished for dest: %s, %d, %s`, dest, size, er)
 	m.recordEmittedBatch(f.created, f.numMessages, f.oldestMVCC, f.rawSize, compressedBytes)
 
 	return nil

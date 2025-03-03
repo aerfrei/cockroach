@@ -1139,7 +1139,7 @@ func (f *cloudFeedFactory) Feed(
 	}
 
 	feedDir := feedSubDir()
-	sinkURI := `nodelocal://1/` + feedDir
+	sinkURI := `http://1/` + feedDir
 	// TODO(dan): This is a pretty unsatisfying way to test that the uri passes
 	// through params it doesn't understand to ExternalStorage.
 	sinkURI += `?should_be=ignored`
@@ -1511,6 +1511,7 @@ func (c *cloudFeed) Next() (*cdctest.TestFeedMessage, error) {
 			return nil, err
 		}
 
+		log.Infof(context.Background(), "starting walkDir for %s", c.dir)
 		if err := filepath.WalkDir(c.dir, c.walkDir); err != nil {
 			return nil, err
 		}
@@ -1518,8 +1519,11 @@ func (c *cloudFeed) Next() (*cdctest.TestFeedMessage, error) {
 }
 
 func (c *cloudFeed) walkDir(path string, d fs.DirEntry, err error) error {
+	log.Infof(context.Background(), "walkDir walking: %s", path)
 	if strings.HasSuffix(path, `.tmp`) {
-		// File in the process of being written by ExternalStorage. Ignore.
+		// File in the process of being written by ExternalStorage.
+		// Ignore subsequent files until this finishes being written.
+		//return filepath.SkipAll
 		return nil
 	}
 
