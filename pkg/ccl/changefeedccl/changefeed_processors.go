@@ -860,7 +860,7 @@ func (ca *changeAggregator) flushBufferedEvents() error {
 // changeAggregator node to the changeFrontier node to allow the changeFrontier
 // to persist the overall changefeed's progress
 func (ca *changeAggregator) noteResolvedSpan(resolved jobspb.ResolvedSpan) (returnErr error) {
-	fmt.Println("noteResolvedSpan")
+	log.Infof(context.Background(), "noteResolvedSpan")
 	if resolved.Timestamp.IsEmpty() {
 		// @0.0 resolved timestamps could come in from rangefeed checkpoint.
 		// When rangefeed starts running, it emits @0.0 resolved timestamp.
@@ -915,7 +915,7 @@ func (ca *changeAggregator) noteResolvedSpan(resolved jobspb.ResolvedSpan) (retu
 		defer func() {
 			ca.lastSpanFlush = timeutil.Now()
 		}()
-		fmt.Println("checkpointing spans call flushFrontier")
+		log.Infof(context.Background(), "checkpointing spans call flushFrontier")
 		return ca.flushFrontier()
 	}
 	return returnErr
@@ -1700,7 +1700,7 @@ func (cf *changeFrontier) maybeMarkJobIdle(recentKVCount uint64) {
 func (cf *changeFrontier) maybeCheckpointJob(
 	resolvedSpan jobspb.ResolvedSpan, frontierChanged bool,
 ) (bool, error) {
-	fmt.Println("CHANGEFEED PROCESSORS: maybeCheckpointJob")
+	log.Infof(context.Background(), "CHANGEFEED PROCESSORS: maybeCheckpointJob")
 	// When in a Backfill, the frontier remains unchanged at the backfill boundary
 	// as we receive spans from the scan request at the Backfill Timestamp
 	inBackfill := !frontierChanged && cf.frontier.InBackfill(resolvedSpan)
@@ -1722,7 +1722,7 @@ func (cf *changeFrontier) maybeCheckpointJob(
 	var checkpoint *jobspb.TimestampSpansMap
 	if updateCheckpoint {
 		maxBytes := changefeedbase.SpanCheckpointMaxBytes.Get(&cf.FlowCtx.Cfg.Settings.SV)
-		fmt.Println("CHANGEFEED PROCESSORS: making checkpoint")
+		log.Infof(context.Background(), "CHANGEFEED PROCESSORS: making checkpoint")
 		checkpoint = cf.frontier.MakeCheckpoint(maxBytes, cf.sliMetrics.CheckpointMetrics)
 	}
 
@@ -1731,7 +1731,7 @@ func (cf *changeFrontier) maybeCheckpointJob(
 			return false, nil
 		}
 		checkpointStart := timeutil.Now()
-		fmt.Println("CHANGEFEED PROCESSORS: about to checkpointJobProgress")
+		log.Infof(context.Background(), "CHANGEFEED PROCESSORS: about to checkpointJobProgress")
 		updated, err := cf.checkpointJobProgress(cf.frontier.Frontier(), checkpoint, cf.evalCtx.Settings.Version)
 		if err != nil {
 			return false, err
