@@ -337,7 +337,7 @@ func (ct *cdcTester) runTPCCWorkload(args tpccArgs) {
 		ct.t.Status("skipping TPCC installation")
 	}
 
-	fmt.Println("TPCC: TPCC workload running with duration", args.duration)
+	ct.t.L().Printf("TPCC: TPCC workload running with duration", args.duration)
 	if args.duration != "" {
 		// TODO(dan,ajwerner): sleeping momentarily before running the workload
 		// mitigates errors like "error in newOrder: missing stock row" from tpcc.
@@ -1480,7 +1480,7 @@ func registerCDC(r registry.Registry) {
 			ct := newCDCTester(ctx, t, c)
 			defer ct.Close()
 
-			fmt.Println("TPCC: setting cluster settings in tpcc test")
+			ct.t.L().Printf("TPCC: setting cluster settings in tpcc test")
 
 			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '500ms';"); err != nil {
 				ct.t.Fatal(err)
