@@ -337,6 +337,7 @@ func (ct *cdcTester) runTPCCWorkload(args tpccArgs) {
 		ct.t.Status("skipping TPCC installation")
 	}
 
+	fmt.Println("TPCC: TPCC workload running with duration", args.duration)
 	if args.duration != "" {
 		// TODO(dan,ajwerner): sleeping momentarily before running the workload
 		// mitigates errors like "error in newOrder: missing stock row" from tpcc.
@@ -1479,14 +1480,16 @@ func registerCDC(r registry.Registry) {
 			ct := newCDCTester(ctx, t, c)
 			defer ct.Close()
 
-			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '5s';"); err != nil {
+			fmt.Println("TPCC: setting cluster settings in tpcc test")
+
+			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '500ms';"); err != nil {
 				ct.t.Fatal(err)
 			}
-			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s';"); err != nil {
+			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '100ms';"); err != nil {
 				ct.t.Fatal(err)
 			}
 
-			ct.runTPCCWorkload(tpccArgs{warehouses: 1000, duration: "120m"})
+			ct.runTPCCWorkload(tpccArgs{warehouses: 1000, duration: "5m"})
 
 			feed := ct.newChangefeed(feedArgs{
 				sinkType: kafkaSink,

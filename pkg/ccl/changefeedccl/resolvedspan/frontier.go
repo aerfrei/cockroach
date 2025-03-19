@@ -7,6 +7,7 @@ package resolvedspan
 
 import (
 	"context"
+	"fmt"
 	"iter"
 	"slices"
 
@@ -310,6 +311,7 @@ func (f *resolvedSpanFrontier) assertBoundaryNotEarlier(
 // changefeedbase.SpanCheckpointLagThreshold.
 func (f *resolvedSpanFrontier) HasLaggingSpans(sv *settings.Values) bool {
 	lagThresholdNanos := int64(changefeedbase.SpanCheckpointLagThreshold.Get(sv))
+	fmt.Println("CHANGEFEED RESOLVEDSPAN: HasLaggingSpans lagThresholdNanos: ", lagThresholdNanos)
 	if lagThresholdNanos == 0 {
 		return false
 	}
