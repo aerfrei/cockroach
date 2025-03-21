@@ -3348,6 +3348,7 @@ func (k kafkaManager) startTopicConsumers(
 			}
 			defer topicConsumer.close()
 			everyN := roachtestutil.Every(30 * time.Second)
+
 			// State to track rows we've seen and count duplicates.
 			seenRows := make(map[string]struct{})
 			numDuplicates := 0
@@ -3368,15 +3369,13 @@ func (k kafkaManager) startTopicConsumers(
 					return err
 				}
 
-				if m.Resolved == nil {
-					// Track rows we've seen and count duplicates.
-					rowKey := fmt.Sprintf(`%s: %s`, string(m.Key), string(m.Value))
-					if _, exists := seenRows[rowKey]; exists {
-						k.t.L().Printf("topic consumer for %s found duplicate row: %s", topic, rowKey)
-						numDuplicates++
-					} else {
-						seenRows[rowKey] = struct{}{}
-					}
+				// We will assume that resolved messages will not be duplicated.
+				rowKey := fmt.Sprintf(`%s: %s`, string(m.Key), string(m.Value))
+				if _, exists := seenRows[rowKey]; exists {
+					k.t.L().Printf("topic consumer for %s found duplicate row: %s", topic, rowKey)
+					numDuplicates++
+				} else {
+					seenRows[rowKey] = struct{}{}
 				}
 
 				if everyN.ShouldLog() {
