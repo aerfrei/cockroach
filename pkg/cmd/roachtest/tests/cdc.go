@@ -3369,7 +3369,8 @@ func (k kafkaManager) startTopicConsumers(
 
 				// The topicConsumer has order validation built-in so this has
 				// the side effect of validating the order of incoming messages.
-				_, err := topicConsumer.next(ctx)
+				m, err := topicConsumer.next(ctx)
+				k.t.L().Printf("AMF: message is key: %s value: %s topic: %s", string(m.Key), string(m.Value), m.Topic)
 				if err != nil {
 					k.t.L().Printf("topic consumer for %s encountered error: %s", topic, err)
 					return err
@@ -3914,7 +3915,6 @@ func (c *topicConsumer) next(ctx context.Context) (*sarama.ConsumerMessage, erro
 		default:
 		}
 		m, err := c.tryNextMessage(ctx)
-		c.t.L().Printf("AMF: next message: %v", m)
 		if err != nil {
 			return nil, err
 		}
