@@ -1480,14 +1480,14 @@ func registerCDC(r registry.Registry) {
 			ct := newCDCTester(ctx, t, c)
 			defer ct.Close()
 
-			ct.t.L().Printf("TPCC: setting cluster settings in tpcc test")
+			// ct.t.L().Printf("TPCC: setting cluster settings in tpcc test")
 
-			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '500ms';"); err != nil {
-				ct.t.Fatal(err)
-			}
-			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '100ms';"); err != nil {
-				ct.t.Fatal(err)
-			}
+			// if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '500ms';"); err != nil {
+			// 	ct.t.Fatal(err)
+			// }
+			// if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '100ms';"); err != nil {
+			// 	ct.t.Fatal(err)
+			// }
 
 			ct.runTPCCWorkload(tpccArgs{warehouses: 1000, duration: "5m"})
 
