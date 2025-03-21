@@ -979,6 +979,8 @@ type CountValidator struct {
 	NumRows, NumResolved                 int
 	NumResolvedRows, NumResolvedWithRows int
 	rowsSinceResolved                    int
+	seenRows                             map[string]struct{}
+	NumDuplicates                        int
 }
 
 // NewCountValidator returns a CountValidator wrapping the given Validator.
@@ -990,6 +992,14 @@ func NewCountValidator(v Validator) *CountValidator {
 func (v *CountValidator) NoteRow(
 	partition, key, value string, updated hlc.Timestamp, topic string,
 ) error {
+	rowKey := fmt.Sprintf(`%s:%s,%s,%s`, updated.String(), key, value, partition)
+
+	if _, exists := v.seenRows[rowKey]; exists {
+		v.NumDuplicates++
+	} else {
+		v.seenRows[rowKey] = struct{}{}
+	}
+
 	v.NumRows++
 	v.rowsSinceResolved++
 	return v.v.NoteRow(partition, key, value, updated, topic)
@@ -1008,6 +1018,48 @@ func (v *CountValidator) NoteResolved(partition string, resolved hlc.Timestamp) 
 
 // Failures implements the Validator interface.
 func (v *CountValidator) Failures() []string {
+	return v.v.Failures()
+}
+
+// DuplicatesValidator wraps a Validator and keeps track of rows that have been
+// seen, incrementing a counter whenever a duplicate row is encountered.
+type DuplicatesValidator struct {
+	v Validator
+
+	seenRows      map[string]struct{}
+	NumDuplicates int
+}
+
+// NewDuplicatesValidator returns a DuplicatesValidator wrapping the given Validator.
+func NewDuplicatesValidator(v Validator) *DuplicatesValidator {
+	return &DuplicatesValidator{
+		v:        v,
+		seenRows: make(map[string]struct{}),
+	}
+}
+
+// NoteRow implements the Validator interface.
+func (v *DuplicatesValidator) NoteRow(
+	partition, key, value string, updated hlc.Timestamp, topic string,
+) error {
+	rowKey := fmt.Sprintf(`%s:%s,%s,%s`, updated.String(), key, value, partition)
+
+	if _, exists := v.seenRows[rowKey]; exists {
+		v.NumDuplicates++
+	} else {
+		v.seenRows[rowKey] = struct{}{}
+	}
+
+	return v.v.NoteRow(partition, key, value, updated, topic)
+}
+
+// NoteResolved implements the Validator interface.
+func (v *DuplicatesValidator) NoteResolved(partition string, resolved hlc.Timestamp) error {
+	return v.v.NoteResolved(partition, resolved)
+}
+
+// Failures implements the Validator interface.
+func (v *DuplicatesValidator) Failures() []string {
 	return v.v.Failures()
 }
 

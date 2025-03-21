@@ -3376,8 +3376,8 @@ func (k kafkaManager) startTopicConsumers(
 					return err
 				}
 				if everyN.ShouldLog() {
-					k.t.L().Printf("topic consumer for %s validated %d rows and %d resolved timestamps",
-						topic, topicConsumer.validator.NumRows, topicConsumer.validator.NumResolved)
+					k.t.L().Printf("topic consumer for %s validated %d rows and %d resolved timestamps AND THIS MANY DUPLICATES: %d",
+						topic, topicConsumer.validator.NumRows, topicConsumer.validator.NumResolved, topicConsumer.validator.NumDuplicates)
 				}
 			}
 		})
