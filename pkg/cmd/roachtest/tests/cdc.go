@@ -3848,6 +3848,8 @@ func newTopicConsumer(
 	}
 	countValidator := cdctest.NewCountValidator(validator)
 
+	t.L().Printf("AMF: creating topic consumer for %s has partitions: %s", topic, topicPartitions)
+
 	return &topicConsumer{
 		t:                  t,
 		consumer:           consumer,
