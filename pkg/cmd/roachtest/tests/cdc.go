@@ -3914,6 +3914,7 @@ func (c *topicConsumer) next(ctx context.Context) (*sarama.ConsumerMessage, erro
 		default:
 		}
 		m, err := c.tryNextMessage(ctx)
+		c.t.L().Printf("AMF: next message: %v", m)
 		if err != nil {
 			return nil, err
 		}
