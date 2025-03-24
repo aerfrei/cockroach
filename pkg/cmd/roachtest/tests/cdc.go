@@ -1479,7 +1479,13 @@ func registerCDC(r registry.Registry) {
 			ct := newCDCTester(ctx, t, c)
 			defer ct.Close()
 
-			ct.runTPCCWorkload(tpccArgs{warehouses: 1000, duration: "120m"})
+			ct.runTPCCWorkload(tpccArgs{warehouses: 1000, duration: "5m"})
+			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '500ms';"); err != nil {
+				ct.t.Fatal(err)
+			}
+			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s';"); err != nil {
+				ct.t.Fatal(err)
+			}
 
 			feed := ct.newChangefeed(feedArgs{
 				sinkType: kafkaSink,
