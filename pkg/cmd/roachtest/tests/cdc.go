@@ -3378,7 +3378,6 @@ func (k kafkaManager) startTopicConsumers(
 				// We will assume that resolved messages will not be duplicated.
 				rowKey := fmt.Sprintf(`%s: %s`, string(m.Key), string(m.Value))
 				if _, exists := seenRows[rowKey]; exists {
-					k.t.L().Printf("topic consumer for %s found duplicate row: %s", topic, rowKey)
 					numDuplicates++
 				} else {
 					seenRows[rowKey] = struct{}{}
