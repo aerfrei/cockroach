@@ -1043,6 +1043,8 @@ func runCDCInitialScanRollingRestart(
 		`ALTER TABLE large SCATTER`,
 		fmt.Sprintf(`CREATE TABLE small (id PRIMARY KEY) AS SELECT generate_series(%d, %d)`, largeRowCount+1, largeRowCount+smallRowCount),
 		`ALTER TABLE small SCATTER`,
+		"SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '500ms';",
+		"SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s';",
 	}
 	switch checkpointType {
 	case cdcNormalCheckpoint:
