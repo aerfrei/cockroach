@@ -627,7 +627,7 @@ func (ca *changeAggregator) setupSpansAndFrontier() (spans []roachpb.Span, err e
 
 	// Checkpointed spans are spans that were above the highwater mark, and we
 	// must preserve that information in the frontier for future checkpointing.
-	log.Infof(ca.Ctx(), "restoring checkpointed spans %s", ca.spec.SpanLevelCheckpoint)
+	log.Infof(ca.Ctx(), "restoring checkpointed spans")
 	if err := checkpoint.Restore(ca.frontier, ca.spec.SpanLevelCheckpoint); err != nil {
 		return nil, err
 	}
