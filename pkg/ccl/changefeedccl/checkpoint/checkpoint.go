@@ -8,13 +8,11 @@
 package checkpoint
 
 import (
-	"context"
 	"iter"
 
 	"github.com/cockroachdb/cockroach/pkg/jobs/jobspb"
 	"github.com/cockroachdb/cockroach/pkg/roachpb"
 	"github.com/cockroachdb/cockroach/pkg/util/hlc"
-	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/cockroach/pkg/util/timeutil"
 	"github.com/cockroachdb/errors"
 )
@@ -77,7 +75,6 @@ type SpanForwarder interface {
 
 // Restore restores the saved progress from a checkpoint to the given SpanForwarder.
 func Restore(sf SpanForwarder, checkpoint *jobspb.TimestampSpansMap) error {
-	log.Infof(context.Background(), "CHECKPOINTING: restoring checkpoint with %s", checkpoint.String())
 	for ts, spans := range checkpoint.All() {
 		if ts.IsEmpty() {
 			return errors.New("checkpoint timestamp is empty")
