@@ -627,7 +627,7 @@ func (ca *changeAggregator) setupSpansAndFrontier() (spans []roachpb.Span, err e
 
 	// Checkpointed spans are spans that were above the highwater mark, and we
 	// must preserve that information in the frontier for future checkpointing.
-	log.Info(ca.Ctx(), "restoring checkpointed spans")
+	log.Infof(ca.Ctx(), "restoring checkpointed spans %s", ca.spec.SpanLevelCheckpoint)
 	if err := checkpoint.Restore(ca.frontier, ca.spec.SpanLevelCheckpoint); err != nil {
 		return nil, err
 	}
@@ -1728,7 +1728,6 @@ func (cf *changeFrontier) maybeCheckpointJob(
 			return false, nil
 		}
 		checkpointStart := timeutil.Now()
-		log.Infof(cf.Ctx(), "CHECKPOINTING: checkpointing job progress: highwater=%s, checkpoint=%s")
 		updated, err := cf.checkpointJobProgress(cf.frontier.Frontier(), checkpoint, cf.evalCtx.Settings.Version)
 		if err != nil {
 			return false, err
