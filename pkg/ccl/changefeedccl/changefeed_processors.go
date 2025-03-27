@@ -1727,6 +1727,7 @@ func (cf *changeFrontier) maybeCheckpointJob(
 			return false, nil
 		}
 		checkpointStart := timeutil.Now()
+		log.Infof(cf.Ctx(), "CHECKPOINTING: checkpointing job progress: highwater=%s, checkpoint=%s")
 		updated, err := cf.checkpointJobProgress(cf.frontier.Frontier(), checkpoint, cf.evalCtx.Settings.Version)
 		if err != nil {
 			return false, err
@@ -1803,6 +1804,7 @@ func (cf *changeFrontier) checkpointJobProgress(
 			cf.lastProtectedTimestampUpdate = timeutil.Now()
 		}
 		if log.V(2) {
+			//
 			log.Infof(cf.Ctx(), "change frontier persisted highwater=%s and checkpoint=%s",
 				frontier, checkpointStr)
 		}

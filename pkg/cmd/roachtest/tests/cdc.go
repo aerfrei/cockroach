@@ -1696,6 +1696,13 @@ func registerCDC(r registry.Registry) {
 
 			ct.runTPCCWorkload(tpccArgs{warehouses: 100, duration: "30m"})
 
+			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '500ms';"); err != nil {
+				ct.t.Fatal(err)
+			}
+			if _, err := ct.DB().Exec("SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s';"); err != nil {
+				ct.t.Fatal(err)
+			}
+
 			feed := ct.newChangefeed(feedArgs{
 				sinkType: kafkaSink,
 				targets:  allTpccTargets,
