@@ -3384,12 +3384,15 @@ func (k kafkaManager) startTopicConsumers(
 					return err
 				}
 
-				// We will assume that resolved messages will not be duplicated.
-				rowKey := fmt.Sprintf(`%s: %s`, string(m.Key), string(m.Value))
-				if _, exists := seenRows[rowKey]; exists {
-					numDuplicates++
-				} else {
-					seenRows[rowKey] = struct{}{}
+				// Exclude resolved messages from computing duplicates.
+				// The resolved timestamp messages will have an empty key.
+				if !len(m.Key) == 0 {
+					rowKey := fmt.Sprintf(`%s: %s`, string(m.Key), string(m.Value))
+					if _, exists := seenRows[rowKey]; exists {
+						numDuplicates++
+					} else {
+						seenRows[rowKey] = struct{}{}
+					}
 				}
 
 				if everyN.ShouldLog() {

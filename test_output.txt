@@ -1,0 +1,315 @@
+==================== Test output for //pkg/ccl/changefeedccl:changefeedccl_test:
+metamorphic: use COCKROACH_RANDOM_SEED=7723474187092148090 for reproduction
+initialized metamorphic constant "parse-json-impl" with value 1
+initialized metamorphic constant "coldata-batch-size" with value 469
+initialized metamorphic constant "span-reuse-rate" with value 62
+initialized metamorphic constant "COCKROACH_ENABLE_HDR_HISTOGRAMS" with value true
+initialized metamorphic constant "default-batch-bytes-limit" with value 23580
+initialized metamorphic constant "kvadmission.flow_control.mode" with value apply_to_all
+initialized metamorphic constant "spilling-queue-initial-len" with value 7
+initialized metamorphic constant "aws-reuse-kms" with value false
+initialized metamorphic constant "row-container-rows-per-chunk-shift" with value 1
+initialized metamorphic constant "lock-table-iters-before-seek" with value 1
+initialized metamorphic constant "mvcc-incremental-iter-tbi" with value false
+initialized metamorphic constant "storage.ingest_split.enabled" with value false
+initialized metamorphic constant "storage.columnar_blocks.enabled" with value false
+initialized metamorphic constant "mvcc-max-iters-before-seek" with value 0
+initialized metamorphic constant "kv.lock_table.unreplicated_lock_reliability.merge.enabled" with value false
+initialized metamorphic constant "addsst-rewrite-forced" with value true
+initialized metamorphic constant "kv.split.estimated_mvcc_stats.enabled" with value false
+initialized metamorphic constant "kv.snapshot.ingest_as_write_threshold" with value 102400
+initialized metamorphic constant "kv.raft.leader_fortification.fraction_enabled" with value 0
+initialized metamorphic constant "kv.snapshot_rebalance.max_sst_size" with value 187006607
+initialized metamorphic constant "changefeed.event_consumer_worker_queue_size" with value 9
+initialized metamorphic constant "kv-batch-size" with value 1
+initialized metamorphic constant "ColIndexJoin-using-streamer-batch-size" with value 2742098
+initialized metamorphic constant "inverted-joiner-batch-size" with value 1
+initialized metamorphic constant "conn-executor-force-exec-with-pausable-portal" with value true
+initialized metamorphic constant "copy-batch-size" with value 13580
+initialized metamorphic constant "async-IE-result-channel-buffer-size" with value 11
+initialized metamorphic constant "tail-call-optimization-enabled" with value false
+initialized metamorphic constant "copy-fast-path-enabled-default" with value false
+initialized metamorphic constant "backup-presplit-spans" with value false
+initialized metamorphic constant "restore-worker-concurrency" with value 1
+initialized metamorphic constant "logical_replication.consumer.try_optimistic_insert.enabled" with value false
+initialized metamorphic constant "default_range_distribution_strategy" with value default
+initialized metamorphic constant "changefeed.parallel_io.request_quota" with value 128
+I250327 20:30:23.969515 1 (gostd) rand.go:256  [-] 1  random seed: 7723474187092148090
+=== RUN   TestCoreChangefeedBackfillScanCheckpoint
+    test_log_scope.go:165: test logs captured to: /tmp/cockroach/_tmp/f5cb02fa45891c8256821a187ced6fe9/logTestCoreChangefeedBackfillScanCheckpoint3399470682
+=== RUN   TestCoreChangefeedBackfillScanCheckpoint/sinkless
+    helpers_test.go:1034: making server as system tenant
+I250327 20:30:23.971285 71 server/config.go:880  [T1,Vsystem,n?] 1  1 storage engine initialized
+I250327 20:30:23.971488 71 server/config.go:883  [T1,Vsystem,n?] 2  Pebble cache size: 128 MiB
+I250327 20:30:23.971497 71 server/config.go:883  [T1,Vsystem,n?] 3  store 0: in-memory, size 512 MiB
+I250327 20:30:23.971502 71 server/config.go:883  [T1,Vsystem,n?] 4  store 0: : rw encrypted=false
+I250327 20:30:23.971856 71 1@rpc/tls.go:247  [T1,Vsystem,n?] 5  server certificate addresses: IP=127.0.0.1,::1; DNS=localhost,*.local; CN=node
+I250327 20:30:23.971870 71 1@rpc/tls.go:296  [T1,Vsystem,n?] 6  web UI certificate addresses: IP=127.0.0.1,::1; DNS=localhost,*.local; CN=node
+W250327 20:30:23.971916 71 server/status/runtime.go:683  [T1,Vsystem,n?] 7  could not parse build timestamp: parsing time "" as "2006/01/02 15:04:05": cannot parse "" as "2006"
+E250327 20:30:23.972225 71 1@server/status/runtime.go:705  [T1,Vsystem,n?] 8  could not get initial network stat counters: exec: "netstat": executable file not found in $PATH
+I250327 20:30:23.972906 112 util/cidr/cidr.go:299  [T1,Vsystem,n?] 9  CIDR lookup updated with 0 destinations
+I250327 20:30:23.981574 71 1@server/clock_monotonicity.go:61  [T1,Vsystem,n?] 10  monitoring forward clock jumps based on server.clock.forward_jump_check.enabled
+I250327 20:30:23.985037 71 server/init.go:224  [T1,Vsystem,n?] 11  no stores initialized
+I250327 20:30:23.985051 71 server/init.go:225  [T1,Vsystem,n?] 12  awaiting `cockroach init` or join with an already initialized node
+I250327 20:30:23.985060 71 server/init.go:289  [T1,Vsystem,n?] 13  cluster 6ecd5fdc-1995-48b8-b955-0c885c3cd81b has been created
+I250327 20:30:23.985071 71 server/init.go:290  [T1,Vsystem,n?] 14  allocated node ID: n1 (for self)
+I250327 20:30:23.985080 71 server/init.go:291  [T1,Vsystem,n?] 15  active cluster version: 1000025.1-upgrading-to-1000025.2-step-004
+W250327 20:30:23.985225 71 1@gossip/gossip.go:1461  [T1,Vsystem,n1] 16  no addresses found; use --join to specify a connected node
+I250327 20:30:23.985228 596 1@server/server.go:1796  [T1,Vsystem,n1] 17  connecting to gossip network to verify cluster ID "6ecd5fdc-1995-48b8-b955-0c885c3cd81b"
+I250327 20:30:23.985630 601 kv/kvserver/kvstorage/init.go:250  [T1,Vsystem,n1,s1] 18  beginning range descriptor iteration
+I250327 20:30:23.985708 601 kv/kvserver/kvstorage/init.go:374  [T1,Vsystem,n1,s1] 19  range descriptor iteration done: 74 range descriptors, 0 intents, 0 tombstones; stats: seeked 150 times (76 internal); stepped 0 times (0 internal); blocks: 0B cached; points: 74 (1.5KB keys, 2.1KB values)
+I250327 20:30:23.985869 601 kv/kvserver/kvstorage/init.go:501  [T1,Vsystem,n1,s1] 20  loaded replica ID for 74/74 replicas
+I250327 20:30:23.986022 601 kv/kvserver/kvstorage/init.go:518  [T1,Vsystem,n1,s1] 21  loaded Raft state for 74/74 replicas
+I250327 20:30:23.986036 601 kv/kvserver/kvstorage/init.go:545  [T1,Vsystem,n1,s1] 22  loaded 74 replicas
+I250327 20:30:23.986045 601 kv/kvserver/kvstorage/init.go:576  [T1,Vsystem,n1,s1] 23  verified 74/74 replicas
+I250327 20:30:23.991099 601 kv/kvserver/store.go:2362  [T1,Vsystem,n1,s1] 24  initialized 74/74 replicas
+I250327 20:30:23.991245 601 server/node.go:690  [T1,Vsystem,n1] 25  initialized store s1 in 5ms (74 replicas)
+I250327 20:30:23.991306 596 1@server/server.go:1799  [T1,Vsystem,n1] 26  node connected via gossip
+I250327 20:30:23.991525 71 kv/kvserver/stores.go:261  [T1,Vsystem,n1] 27  read 0 node addresses from persistent storage
+I250327 20:30:23.991569 71 server/node.go:801  [T1,Vsystem,n1] 28  started with attributes []
+I250327 20:30:23.991655 71 1@server/server.go:1993  [T1,Vsystem,n1] 29  starting https server at 127.0.0.1:59755 (use: 127.0.0.1:59755)
+I250327 20:30:23.991669 71 1@server/server.go:1998  [T1,Vsystem,n1] 30  starting postgres server at 127.0.0.1:59757 (use: 127.0.0.1:59757)
+I250327 20:30:23.991678 71 1@server/server.go:2001  [T1,Vsystem,n1] 31  starting grpc server at 127.0.0.1:59756
+I250327 20:30:23.991687 71 1@server/server.go:2002  [T1,Vsystem,n1] 32  advertising CockroachDB node at 127.0.0.1:59756
+I250327 20:30:23.996680 71 1@util/log/event_log.go:39  [T1,Vsystem,n1] 33 ={"Timestamp":1743107423996678000,"EventType":"node_join","NodeID":1,"StartedAt":1743107423985239000,"LastUp":1743107423985239000}
+I250327 20:30:23.996730 357 kv/kvclient/rangefeed/rangefeedcache/watcher.go:340  [T1,Vsystem,n1] 34  spanconfig-subscriber: established range feed cache
+I250327 20:30:23.996774 359 kv/kvclient/rangefeed/rangefeedcache/watcher.go:340  [T1,Vsystem,n1] 35  settings-watcher: established range feed cache
+I250327 20:30:23.997486 732 kv/kvserver/queue.go:612  [T1,Vsystem,n1,s1,r9/1:/Table/{5-6},raft] 36  rate limited in MaybeAdd (replicate): throttled on async limiting semaphore
+I250327 20:30:23.997891 71 sql/sqlliveness/slinstance/slinstance.go:435  [T1,Vsystem,n1] 37  starting SQL liveness instance
+I250327 20:30:23.998625 839 sql/sqlliveness/slstorage/slstorage.go:540  [T1,Vsystem,n1] 38  inserted sqlliveness session 010180c3d7297d620e432bb5d7a95b033b4f97 with expiry 1743107463.997958000,0
+I250327 20:30:23.998645 839 sql/sqlliveness/slinstance/slinstance.go:247  [T1,Vsystem,n1] 39  created new SQL liveness session 010180c3d7297d620e432bb5d7a95b033b4f97
+I250327 20:30:23.998658 71 sql/sqlinstance/instancestorage/instancestorage.go:338  [T1,Vsystem,n1] 40  assigning instance id to rpc addr 127.0.0.1:59756 and sql addr 127.0.0.1:59757
+I250327 20:30:23.998921 71 server/server_sql.go:1618  [T1,Vsystem,n1] 41  bound sqlinstance: Instance{RegionPrefix: gA==, InstanceID: 1, SQLAddr: 127.0.0.1:59757, RPCAddr: 127.0.0.1:59756, SessionID: 010180c3d7297d620e432bb5d7a95b033b4f97, Locality: , BinaryVersion: 1000025.1-upgrading-to-1000025.2-step-004}
+I250327 20:30:23.999021 1175 sql/sqlstats/persistedsqlstats/provider.go:159  [T1,Vsystem,n1] 42  starting sql-stats-worker with initial delay: 9m53.522915023s
+I250327 20:30:23.999031 71 upgrade/upgrademanager/manager.go:171  [T1,Vsystem,n1] 43  running permanent upgrades up to version: 1000025.1-upgrading-to-1000025.2-step-004
+I250327 20:30:23.999210 1188 kv/kvclient/rangefeed/rangefeedcache/watcher.go:340  [T1,Vsystem,n1] 44  system-config-cache: established range feed cache
+I250327 20:30:23.999255 849 kv/kvserver/replica_rangefeed.go:870  [T1,Vsystem,n1,rangefeed=lease,mux_n=1,gen=2,r7/1:/Table/{3-4},sm=1,sid=1,s1] 45  RangeFeed closed timestamp is empty
+I250327 20:30:23.999362 1172 sql/temporary_schema.go:506  [T1,Vsystem,n1] 46  running temporary object cleanup background job
+I250327 20:30:24.000121 686 kv/kvserver/queue.go:612  [T1,Vsystem,n1,s1,r6/1:/Table/{0-3},raft] 47  rate limited in MaybeAdd (merge): throttled on async limiting semaphore
+I250327 20:30:24.000607 1172 sql/temporary_schema.go:556  [T1,Vsystem,n1] 48  found 0 temporary schemas
+I250327 20:30:24.000620 1172 sql/temporary_schema.go:559  [T1,Vsystem,n1] 49  early exiting temporary schema cleaner as no temporary schemas were found
+I250327 20:30:24.000626 1172 sql/temporary_schema.go:560  [T1,Vsystem,n1] 50  completed temporary object cleanup job
+I250327 20:30:24.000637 1172 sql/temporary_schema.go:641  [T1,Vsystem,n1] 51  temporary object cleaner next scheduled to run at 2025-03-27 21:00:23.998972 +0000 UTC m=+1800.087578584
+I250327 20:30:24.003186 71 upgrade/upgrademanager/manager.go:239  [T1,Vsystem,n1] 52  the last permanent upgrade (v0.0-upgrading-step-004) does not appear to have completed; attempting to run all upgrades
+I250327 20:30:24.003209 71 upgrade/upgrademanager/manager.go:245  [T1,Vsystem,n1] 53  running permanent upgrade for version 0.0-upgrading-step-002
+I250327 20:30:24.005049 1187 spanconfig/spanconfigmanager/manager.go:136  [T1,Vsystem,n1] 54  started auto span config reconciliation job
+I250327 20:30:24.005076 1518 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720240349185] 55  job 1058527720240349185: resuming execution
+I250327 20:30:24.006006 71 upgrade/upgrademanager/manager.go:723  [T1,Vsystem,n1] 56  running intitialize the system cluster
+I250327 20:30:24.006030 1636 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720253718529] 57  job 1058527720253718529: resuming execution
+I250327 20:30:24.011585 1676 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720253718529] 58  job 1058527720253718529: resuming execution
+I250327 20:30:24.011587 1675 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720240349185] 59  job 1058527720240349185: resuming execution
+I250327 20:30:24.011712 1607 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720253718529] 60  MIGRATION job 1058527720253718529: stepping through state running
+I250327 20:30:24.011772 1689 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720240349185] 61  AUTO SPAN CONFIG RECONCILIATION job 1058527720240349185: stepping through state running
+I250327 20:30:24.015805 1689 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720240349185] 62 ={"Timestamp":1743107424015803000,"EventType":"status_change","JobID":1058527720240349185,"JobType":"AUTO SPAN CONFIG RECONCILIATION","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.015840 1607 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720253718529] 63 ={"Timestamp":1743107424015839000,"EventType":"status_change","JobID":1058527720253718529,"JobType":"MIGRATION","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.016110 1607 upgrade/upgrades/permanent_upgrades.go:54  [T1,Vsystem,n1,job=MIGRATION id=1058527720253718529,upgrade=0.0-upgrading-step-002] 64  executing system bootstrap step "initialize cluster version"
+I250327 20:30:24.017163 1607 upgrade/upgrades/permanent_upgrades.go:54  [T1,Vsystem,n1,job=MIGRATION id=1058527720253718529,upgrade=0.0-upgrading-step-002] 65  executing system bootstrap step "configure key visualizer"
+I250327 20:30:24.018155 1783 1@util/log/event_log.go:39  [T1,Vsystem,n1,job=MIGRATION id=1058527720253718529,upgrade=0.0-upgrading-step-002,intExec=set-SpanStatsTenantBoundariesTable-TTL] 66 ={"Timestamp":1743107424017728000,"EventType":"set_zone_config","Statement":"ALTER TABLE \"\".system.span_stats_tenant_boundaries CONFIGURE ZONE USING \"gc.ttlseconds\" = $1","Tag":"CONFIGURE ZONE","User":"node","DescriptorID":58,"ApplicationName":"$ internal-set-SpanStatsTenantBoundariesTable-TTL","PlaceholderValues":["3600"],"Target":"TABLE system.public.span_stats_tenant_boundaries","Options":["\"gc.ttlseconds\" = 3600"],"ResolvedOldConfig":"range_min_bytes:134217728 range_max_bytes:536870912 gc:<ttl_seconds:14400 > num_replicas:1 inherited_constraints:false null_voter_constraints_is_empty:true inherited_lease_preferences:false "}
+I250327 20:30:24.019038 1607 upgrade/upgrades/permanent_upgrades.go:54  [T1,Vsystem,n1,job=MIGRATION id=1058527720253718529,upgrade=0.0-upgrading-step-002] 67  executing system bootstrap step "configure sql activity table TTLs"
+I250327 20:30:24.019982 1405 1@util/log/event_log.go:39  [T1,Vsystem,n1,job=MIGRATION id=1058527720253718529,upgrade=0.0-upgrading-step-002,intExec=set-SQLStatsTables-TTL] 68 ={"Timestamp":1743107424019113000,"EventType":"set_zone_config","Statement":"ALTER TABLE \"\".system.statement_statistics CONFIGURE ZONE USING \"gc.ttlseconds\" = $1","Tag":"CONFIGURE ZONE","User":"node","DescriptorID":42,"ApplicationName":"$ internal-set-SQLStatsTables-TTL","PlaceholderValues":["3600"],"Target":"TABLE system.public.statement_statistics","Options":["\"gc.ttlseconds\" = 3600"],"ResolvedOldConfig":"range_min_bytes:134217728 range_max_bytes:536870912 gc:<ttl_seconds:14400 > num_replicas:1 inherited_constraints:false null_voter_constraints_is_empty:true inherited_lease_preferences:false "}
+I250327 20:30:24.021675 1813 1@util/log/event_log.go:39  [T1,Vsystem,n1,job=MIGRATION id=1058527720253718529,upgrade=0.0-upgrading-step-002,intExec=set-SQLStatsTables-TTL] 69 ={"Timestamp":1743107424020080000,"EventType":"set_zone_config","Statement":"ALTER TABLE \"\".system.transaction_statistics CONFIGURE ZONE USING \"gc.ttlseconds\" = $1","Tag":"CONFIGURE ZONE","User":"node","DescriptorID":43,"ApplicationName":"$ internal-set-SQLStatsTables-TTL","PlaceholderValues":["3600"],"Target":"TABLE system.public.transaction_statistics","Options":["\"gc.ttlseconds\" = 3600"],"ResolvedOldConfig":"range_min_bytes:134217728 range_max_bytes:536870912 gc:<ttl_seconds:14400 > num_replicas:1 inherited_constraints:false null_voter_constraints_is_empty:true inherited_lease_preferences:false "}
+I250327 20:30:24.023054 1505 1@util/log/event_log.go:39  [T1,Vsystem,n1,job=MIGRATION id=1058527720253718529,upgrade=0.0-upgrading-step-002,intExec=set-SQLStatsTables-TTL] 70 ={"Timestamp":1743107424021794000,"EventType":"set_zone_config","Statement":"ALTER TABLE \"\".system.statement_activity CONFIGURE ZONE USING \"gc.ttlseconds\" = $1","Tag":"CONFIGURE ZONE","User":"node","DescriptorID":61,"ApplicationName":"$ internal-set-SQLStatsTables-TTL","PlaceholderValues":["3600"],"Target":"TABLE system.public.statement_activity","Options":["\"gc.ttlseconds\" = 3600"],"ResolvedOldConfig":"range_min_bytes:134217728 range_max_bytes:536870912 gc:<ttl_seconds:14400 > num_replicas:1 inherited_constraints:false null_voter_constraints_is_empty:true inherited_lease_preferences:false "}
+I250327 20:30:24.024244 1851 1@util/log/event_log.go:39  [T1,Vsystem,n1,job=MIGRATION id=1058527720253718529,upgrade=0.0-upgrading-step-002,intExec=set-SQLStatsTables-TTL] 71 ={"Timestamp":1743107424023180000,"EventType":"set_zone_config","Statement":"ALTER TABLE \"\".system.transaction_activity CONFIGURE ZONE USING \"gc.ttlseconds\" = $1","Tag":"CONFIGURE ZONE","User":"node","DescriptorID":62,"ApplicationName":"$ internal-set-SQLStatsTables-TTL","PlaceholderValues":["3600"],"Target":"TABLE system.public.transaction_activity","Options":["\"gc.ttlseconds\" = 3600"],"ResolvedOldConfig":"range_min_bytes:134217728 range_max_bytes:536870912 gc:<ttl_seconds:14400 > num_replicas:1 inherited_constraints:false null_voter_constraints_is_empty:true inherited_lease_preferences:false "}
+I250327 20:30:24.024864 1607 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720253718529] 72  MIGRATION job 1058527720253718529: stepping through state succeeded
+I250327 20:30:24.025220 1186 jobs/adopt.go:105  [T1,Vsystem,n1] 73  claimed 1 jobs
+I250327 20:30:24.025684 1759 jobs/adopt.go:224  [T1,Vsystem,n1,job=100] 74  job 100: resuming execution
+I250327 20:30:24.026388 1875 jobs/registry.go:1681  [T1,Vsystem,n1,job=100] 75  KEY VISUALIZER job 100: stepping through state running
+I250327 20:30:24.028187 1875 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=100] 76 ={"Timestamp":1743107424028186000,"EventType":"status_change","JobID":100,"JobType":"KEY VISUALIZER","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.029763 1607 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720253718529] 77 ={"Timestamp":1743107424029763000,"EventType":"status_change","JobID":1058527720253718529,"JobType":"MIGRATION","Description":"state changed to: succeeded","PreviousStatus":"running","NewStatus":"succeeded","RunNum":0}
+I250327 20:30:24.032627 1689 spanconfig/spanconfigsqlwatcher/sqlwatcher.go:241  [T1,Vsystem,n1,job=AUTO SPAN CONFIG RECONCILIATION id=1058527720240349185] 78  established range feed over system.descriptors starting at time 1743107424.017530000,0
+I250327 20:30:24.032660 1689 spanconfig/spanconfigsqlwatcher/sqlwatcher.go:300  [T1,Vsystem,n1,job=AUTO SPAN CONFIG RECONCILIATION id=1058527720240349185] 79  established range feed over system.zones starting at time 1743107424.017530000,0
+I250327 20:30:24.032675 1689 spanconfig/spanconfigsqlwatcher/sqlwatcher.go:401  [T1,Vsystem,n1,job=AUTO SPAN CONFIG RECONCILIATION id=1058527720240349185] 80  established range feed over system.protected_ts_records starting at time 1743107424.017530000,0
+I250327 20:30:24.035326 71 jobs/wait.go:148  [T1,Vsystem,n1] 81  waited for 1 [1058527720253718529] queued jobs to complete 29.30425ms
+I250327 20:30:24.035348 71 upgrade/upgrademanager/manager.go:245  [T1,Vsystem,n1] 82  running permanent upgrade for version 0.0-upgrading-step-004
+I250327 20:30:24.036957 71 upgrade/upgrademanager/manager.go:723  [T1,Vsystem,n1] 83  running intitialize the cluster
+I250327 20:30:24.036983 1986 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720359067649] 84  job 1058527720359067649: resuming execution
+I250327 20:30:24.042535 1975 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720359067649] 85  MIGRATION job 1058527720359067649: stepping through state running
+I250327 20:30:24.043971 1975 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720359067649] 86 ={"Timestamp":1743107424043970000,"EventType":"status_change","JobID":1058527720359067649,"JobType":"MIGRATION","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.044189 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 87  executing bootstrap step "add users and roles"
+I250327 20:30:24.046774 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 88  executing bootstrap step "enable diagnostics reporting"
+I250327 20:30:24.047252 1936 1@util/log/event_log.go:39  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=optInToDiagnosticsStatReporting] 89 ={"Timestamp":1743107424046838000,"EventType":"set_cluster_setting","Statement":"SET CLUSTER SETTING \"diagnostics.reporting.enabled\" = true","Tag":"SET CLUSTER SETTING","User":"node","ApplicationName":"$ internal-optInToDiagnosticsStatReporting","SettingName":"diagnostics.reporting.enabled","Value":"true"}
+I250327 20:30:24.047281 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 90  executing bootstrap step "initialize the cluster.secret setting"
+I250327 20:30:24.047735 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 91  executing bootstrap step "update system.locations with default location data"
+I250327 20:30:24.049519 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 92  executing bootstrap step "create default databases"
+I250327 20:30:24.050950 2051 sql/schemachanger/scbuild/event_log.go:61  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 93  event logging for declarative schema change targets built for CREATE DATABASE
+I250327 20:30:24.051044 2051 sql/schemachanger/scplan/plan.go:96  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 94  building declarative schema changer plan in StatementPhase (rollback=false) for CREATE DATABASE
+I250327 20:30:24.052197 2051 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 95  executing declarative schema change StatementPhase stage 1 of 1 with 17 MutationType ops (rollback=false) for CREATE DATABASE
+I250327 20:30:24.052396 2051 sql/schemachanger/scplan/plan.go:96  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 96  building declarative schema changer plan in PreCommitPhase (rollback=false) for CREATE DATABASE
+I250327 20:30:24.053056 2051 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 97  executing declarative schema change PreCommitPhase stage 1 of 2 with 1 MutationType op (rollback=false) for CREATE DATABASE
+I250327 20:30:24.053073 2051 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 98  executing declarative schema change PreCommitPhase stage 2 of 2 with 17 MutationType ops (rollback=false) for CREATE DATABASE
+I250327 20:30:24.053317 2051 5@util/log/event_log.go:39  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 99 ={"Timestamp":1743107424049591000,"EventType":"create_database","Statement":"CREATE DATABASE IF NOT EXISTS defaultdb OWNER = root","Tag":"CREATE DATABASE","User":"node","DescriptorID":100,"ApplicationName":"$ internal-create-default-DB","DatabaseName":"defaultdb"}
+I250327 20:30:24.054944 2077 sql/schemachanger/scbuild/event_log.go:61  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 100  event logging for declarative schema change targets built for CREATE DATABASE
+I250327 20:30:24.054987 2077 sql/schemachanger/scplan/plan.go:96  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 101  building declarative schema changer plan in StatementPhase (rollback=false) for CREATE DATABASE
+I250327 20:30:24.055746 2077 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 102  executing declarative schema change StatementPhase stage 1 of 1 with 17 MutationType ops (rollback=false) for CREATE DATABASE
+I250327 20:30:24.055813 2077 sql/schemachanger/scplan/plan.go:96  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 103  building declarative schema changer plan in PreCommitPhase (rollback=false) for CREATE DATABASE
+I250327 20:30:24.056434 2077 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 104  executing declarative schema change PreCommitPhase stage 1 of 2 with 1 MutationType op (rollback=false) for CREATE DATABASE
+I250327 20:30:24.056448 2077 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 105  executing declarative schema change PreCommitPhase stage 2 of 2 with 17 MutationType ops (rollback=false) for CREATE DATABASE
+I250327 20:30:24.056621 2077 5@util/log/event_log.go:39  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004,intExec=create-default-DB] 106 ={"Timestamp":1743107424054493000,"EventType":"create_database","Statement":"CREATE DATABASE IF NOT EXISTS postgres OWNER = root","Tag":"CREATE DATABASE","User":"node","DescriptorID":102,"ApplicationName":"$ internal-create-default-DB","DatabaseName":"postgres"}
+I250327 20:30:24.056930 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 107  executing bootstrap step "create jobs metrics polling job"
+I250327 20:30:24.057577 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 108  executing bootstrap step "create sql activity updater job"
+I250327 20:30:24.058229 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 109  executing bootstrap step "create mvcc stats job"
+I250327 20:30:24.058765 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 110  executing bootstrap step "create update cached table metadata job"
+I250327 20:30:24.059365 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 111  executing bootstrap step "maybe initialize replication standby read-only catalog"
+I250327 20:30:24.059374 1975 upgrade/upgrades/permanent_upgrades.go:97  [T1,Vsystem,n1,job=MIGRATION id=1058527720359067649,upgrade=0.0-upgrading-step-004] 112  executing bootstrap step "create sql activity flush job"
+I250327 20:30:24.060083 1975 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720359067649] 113  MIGRATION job 1058527720359067649: stepping through state succeeded
+I250327 20:30:24.062503 1975 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720359067649] 114 ={"Timestamp":1743107424062502000,"EventType":"status_change","JobID":1058527720359067649,"JobType":"MIGRATION","Description":"state changed to: succeeded","PreviousStatus":"running","NewStatus":"succeeded","RunNum":0}
+I250327 20:30:24.066724 1186 jobs/adopt.go:105  [T1,Vsystem,n1] 115  claimed 5 jobs
+I250327 20:30:24.067080 2202 jobs/adopt.go:224  [T1,Vsystem,n1,job=106] 116  job 106: resuming execution
+I250327 20:30:24.067087 2200 jobs/adopt.go:224  [T1,Vsystem,n1,job=104] 118  job 104: resuming execution
+I250327 20:30:24.067095 2201 jobs/adopt.go:224  [T1,Vsystem,n1,job=105] 119  job 105: resuming execution
+I250327 20:30:24.067093 2198 jobs/adopt.go:224  [T1,Vsystem,n1,job=101] 120  job 101: resuming execution
+I250327 20:30:24.067081 2199 jobs/adopt.go:224  [T1,Vsystem,n1,job=103] 117  job 103: resuming execution
+I250327 20:30:24.069701 2158 jobs/registry.go:1681  [T1,Vsystem,n1,job=104] 121  MVCC STATISTICS UPDATE job 104: stepping through state running
+I250327 20:30:24.069704 71 jobs/wait.go:148  [T1,Vsystem,n1] 122  waited for 1 [1058527720359067649] queued jobs to complete 32.73125ms
+I250327 20:30:24.069718 71 server/server_sql.go:1720  [T1,Vsystem,n1] 123  done ensuring all necessary startup migrations have run
+I250327 20:30:24.069747 2191 jobs/registry.go:1681  [T1,Vsystem,n1,job=106] 124  SQL ACTIVITY FLUSH job 106: stepping through state running
+I250327 20:30:24.069771 2116 jobs/registry.go:1681  [T1,Vsystem,n1,job=101] 125  POLL JOBS STATS job 101: stepping through state running
+I250327 20:30:24.069788 1918 jobs/registry.go:1681  [T1,Vsystem,n1,job=105] 126  UPDATE TABLE METADATA CACHE job 105: stepping through state running
+I250327 20:30:24.069828 71 server/license/enforcer.go:262  [T1,Vsystem,n1] 128  trial license expiry initialized to 1970-01-01 00:00:00 +0000 UTC
+I250327 20:30:24.069788 1861 jobs/registry.go:1681  [T1,Vsystem,n1,job=103] 127  AUTO UPDATE SQL ACTIVITY job 103: stepping through state running
+I250327 20:30:24.070130 71 server/license/enforcer.go:293  [T1,Vsystem,n1] 129  generated new cluster init grace period end time: 2025-04-03 20:30:23.97041 +0000 UTC
+I250327 20:30:24.070301 71 server/license/enforcer.go:498  [T1,Vsystem,n1] 130  enforcer license updated: type is none, grace period ends at "2025-04-03 20:30:23 +0000 UTC", telemetry required: false
+I250327 20:30:24.070315 71 server/license/enforcer.go:498  [T1,Vsystem,n1] 131  enforcer license updated: type is none, grace period ends at "2025-04-03 20:30:23 +0000 UTC", telemetry required: false
+I250327 20:30:24.071046 2328 kv/kvclient/rangefeed/rangefeedcache/watcher.go:340  [T1,Vsystem,n1] 132  tenant-settings-watcher: established range feed cache
+I250327 20:30:24.071114 2330 kv/kvclient/rangefeed/rangefeedcache/watcher.go:340  [T1,Vsystem,n1] 133  tenant-entry-watcher: established range feed cache
+I250327 20:30:24.071137 2323 jobs/job_scheduler.go:407  [T1,Vsystem,n1] 134  waiting 2m0s before scheduled jobs daemon start
+I250327 20:30:24.071255 2221 sql/syntheticprivilegecache/cache.go:202  [T1,Vsystem,n1] 135  warmed privileges for virtual tables in 1.306667ms
+I250327 20:30:24.071274 2330 multitenant/tenantcapabilities/tenantcapabilitieswatcher/watcher.go:285  [T1,Vsystem,n1] 136  received results of a full table scan for tenant capabilities
+I250327 20:30:24.071890 2326 server/auto_upgrade.go:81  [T1,Vsystem,n1] 137  no need to upgrade, cluster already at the newest version
+I250327 20:30:24.072019 2191 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=106] 138 ={"Timestamp":1743107424072017000,"EventType":"status_change","JobID":106,"JobType":"SQL ACTIVITY FLUSH","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.072062 2191 jobs/registry.go:1681  [T1,Vsystem,n1,job=106] 139  SQL ACTIVITY FLUSH job 106: stepping through state succeeded
+I250327 20:30:24.072066 2158 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=104] 140 ={"Timestamp":1743107424072065000,"EventType":"status_change","JobID":104,"JobType":"MVCC STATISTICS UPDATE","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.072092 2158 sql/mvcc_statistics_update_job.go:63  [T1,Vsystem,n1,job=MVCC STATISTICS UPDATE id=104] 141  starting mvcc statistics update job
+I250327 20:30:24.072144 1861 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=103] 142 ={"Timestamp":1743107424072143000,"EventType":"status_change","JobID":103,"JobType":"AUTO UPDATE SQL ACTIVITY","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.072168 1861 sql/sql_activity_update_job.go:79  [T1,Vsystem,n1,job=AUTO UPDATE SQL ACTIVITY id=103] 143  starting sql stats activity flush job
+I250327 20:30:24.072375 2116 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=101] 144 ={"Timestamp":1743107424072375000,"EventType":"status_change","JobID":101,"JobType":"POLL JOBS STATS","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.072502 1918 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=105] 145 ={"Timestamp":1743107424072501000,"EventType":"status_change","JobID":105,"JobType":"UPDATE TABLE METADATA CACHE","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.072802 71 server/license/enforcer.go:582  [-] 146  disable all license enforcement
+I250327 20:30:24.072814 71 1@server/server_sql.go:1971  [T1,Vsystem,n1] 147  serving sql connections
+I250327 20:30:24.077050 2372 4@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 148 ={"Timestamp":1743107424077049000,"EventType":"client_authentication_ok","InstanceID":1,"Network":"tcp","RemoteAddress":"127.0.0.1:59758","SessionID":"1830c2f78173ce980000000000000001","Transport":"hostssl","User":"root","SystemIdentity":"root","Method":"cert-password"}
+I250327 20:30:24.077629 2372 1@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 149 ={"Timestamp":1743107424077142000,"EventType":"set_cluster_setting","Statement":"SET CLUSTER SETTING \"kv.rangefeed.enabled\" = true","Tag":"SET CLUSTER SETTING","User":"root","SettingName":"kv.rangefeed.enabled","Value":"true"}
+I250327 20:30:24.078093 2372 1@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 150 ={"Timestamp":1743107424077802000,"EventType":"set_cluster_setting","Statement":"SET CLUSTER SETTING \"kv.closed_timestamp.target_duration\" = '1s'","Tag":"SET CLUSTER SETTING","User":"root","SettingName":"kv.closed_timestamp.target_duration","Value":"00:00:01"}
+I250327 20:30:24.078487 2372 1@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 151 ={"Timestamp":1743107424078211000,"EventType":"set_cluster_setting","Statement":"SET CLUSTER SETTING \"changefeed.experimental_poll_interval\" = '10ms'","Tag":"SET CLUSTER SETTING","User":"root","SettingName":"changefeed.experimental_poll_interval","Value":"00:00:00.01"}
+I250327 20:30:24.078981 2372 1@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 152 ={"Timestamp":1743107424078620000,"EventType":"set_cluster_setting","Statement":"SET CLUSTER SETTING \"sql.defaults.vectorize\" = \"on\"","Tag":"SET CLUSTER SETTING","User":"root","SettingName":"sql.defaults.vectorize","Value":"on"}
+I250327 20:30:24.080008 2191 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=106] 153 ={"Timestamp":1743107424080006000,"EventType":"status_change","JobID":106,"JobType":"SQL ACTIVITY FLUSH","Description":"state changed to: succeeded","PreviousStatus":"running","NewStatus":"succeeded","RunNum":0}
+I250327 20:30:24.081011 2372 1@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 154 ={"Timestamp":1743107424079184000,"EventType":"set_tenant_cluster_setting","Statement":"ALTER VIRTUAL CLUSTER ALL SET CLUSTER SETTING \"changefeed.experimental_poll_interval\" = '10ms'","Tag":"ALTER VIRTUAL CLUSTER SET CLUSTER SETTING","User":"root","SettingName":"changefeed.experimental_poll_interval","Value":"00:00:00.01","AllTenants":true}
+I250327 20:30:24.081913 2372 1@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 155 ={"Timestamp":1743107424081179000,"EventType":"set_tenant_cluster_setting","Statement":"ALTER VIRTUAL CLUSTER ALL SET CLUSTER SETTING \"sql.defaults.vectorize\" = \"on\"","Tag":"ALTER VIRTUAL CLUSTER SET CLUSTER SETTING","User":"root","SettingName":"sql.defaults.vectorize","Value":"on","AllTenants":true}
+I250327 20:30:24.083015 2372 sql/schemachanger/scbuild/event_log.go:61  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 156  event logging for declarative schema change targets built for CREATE DATABASE
+I250327 20:30:24.083095 2372 sql/schemachanger/scplan/plan.go:96  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 157  building declarative schema changer plan in StatementPhase (rollback=false) for CREATE DATABASE
+I250327 20:30:24.084229 2372 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 158  executing declarative schema change StatementPhase stage 1 of 1 with 17 MutationType ops (rollback=false) for CREATE DATABASE
+I250327 20:30:24.084393 2372 sql/schemachanger/scplan/plan.go:96  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 159  building declarative schema changer plan in PreCommitPhase (rollback=false) for CREATE DATABASE
+I250327 20:30:24.085397 2372 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 160  executing declarative schema change PreCommitPhase stage 1 of 2 with 1 MutationType op (rollback=false) for CREATE DATABASE
+I250327 20:30:24.085426 2372 sql/schemachanger/scrun/scrun.go:186  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 161  executing declarative schema change PreCommitPhase stage 2 of 2 with 17 MutationType ops (rollback=false) for CREATE DATABASE
+I250327 20:30:24.086083 2372 5@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 162 ={"Timestamp":1743107424082152000,"EventType":"create_database","Statement":"CREATE DATABASE d","Tag":"CREATE DATABASE","User":"root","DescriptorID":104,"DatabaseName":"d"}
+    helpers_test.go:1110: making sinkless feed factory
+I250327 20:30:24.088630 2372 sql/table.go:205  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 163  queued new schema-change job 1058527720533590017 for table 4, mutation 0
+I250327 20:30:24.088863 2372 sql/table.go:205  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 164  queued new schema-change job 1058527720534376449 for table 33, mutation 0
+I250327 20:30:24.089086 2372 sql/table.go:205  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 165  queued new schema-change job 1058527720535097345 for table 23, mutation 0
+I250327 20:30:24.092187 2372 6@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 166 ={"Timestamp":1743107424086760000,"EventType":"create_role","Statement":"CREATE USER IF NOT EXISTS sinklessfeeduser WITH PASSWORD '*****'","Tag":"CREATE ROLE","User":"root","RoleName":"sinklessfeeduser"}
+I250327 20:30:24.092234 2372 jobs/wait.go:56  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 167  waiting for 3 [1058527720533590017 1058527720534376449 1058527720535097345] queued jobs to complete
+I250327 20:30:24.092259 2410 jobs/adopt.go:224  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root,job=1058527720535097345] 168  job 1058527720535097345: resuming execution
+I250327 20:30:24.092270 2408 jobs/adopt.go:224  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root,job=1058527720533590017] 169  job 1058527720533590017: resuming execution
+I250327 20:30:24.092274 2409 jobs/adopt.go:224  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root,job=1058527720534376449] 170  job 1058527720534376449: resuming execution
+I250327 20:30:24.097642 2536 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720535097345] 171  job 1058527720535097345: resuming execution
+I250327 20:30:24.097675 2534 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720533590017] 172  job 1058527720533590017: resuming execution
+I250327 20:30:24.097744 2535 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720534376449] 173  job 1058527720534376449: resuming execution
+I250327 20:30:24.097947 2548 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720533590017] 174  SCHEMA CHANGE job 1058527720533590017: stepping through state running
+I250327 20:30:24.097968 2414 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720534376449] 176  SCHEMA CHANGE job 1058527720534376449: stepping through state running
+I250327 20:30:24.097950 2524 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720535097345] 175  SCHEMA CHANGE job 1058527720535097345: stepping through state running
+I250327 20:30:24.098184 2126 sql/catalog/lease/descriptor_state.go:135  [n1] 177  new lease: tabledesc.immutable: {ID: 4, Version: 2, ModificationTime: "1743107424.086760000,0", ParentID: 1, ParentSchemaID: 29, State: PUBLIC, NextColumnID: 5, Columns: [{ID: 1, TypeID: 25, Null: false}, {ID: 2, TypeID: 17, Null: true}, {ID: 3, TypeID: 16, Null: false, HasDefault: true}, {ID: 4, TypeID: 26, Null: false}], NextFamilyID: 4, Families: [{ID: 0, Columns: [1, 4]}, {ID: 2, Columns: [2]}, {ID: 3, Columns: [3]}], PrimaryIndex: 1, NextIndexID: 3, Indexes: [{ID: 1, Unique: true, KeyColumns: [{ID: 1, Dir: ASC}], StoreColumns: [2, 3, 4]}, {ID: 2, Unique: true, KeyColumns: [{ID: 4, Dir: ASC}], KeySuffixColumns: [1]}]}
+I250327 20:30:24.098531 2527 sql/catalog/lease/descriptor_state.go:135  [n1] 178  new lease: tabledesc.immutable: {ID: 23, Version: 2, ModificationTime: "1743107424.086760000,0", ParentID: 1, ParentSchemaID: 29, State: PUBLIC, NextColumnID: 6, Columns: [{ID: 1, TypeID: 25, Null: false}, {ID: 2, TypeID: 25, Null: false}, {ID: 3, TypeID: 16, Null: false}, {ID: 4, TypeID: 26, Null: false}, {ID: 5, TypeID: 26, Null: false}], NextFamilyID: 6, Families: [{ID: 0, Columns: [1, 2]}, {ID: 3, Columns: [3]}, {ID: 4, Columns: [4]}, {ID: 5, Columns: [5]}], PrimaryIndex: 1, NextIndexID: 7, Indexes: [{ID: 1, Unique: true, KeyColumns: [{ID: 1, Dir: ASC}, {ID: 2, Dir: ASC}], StoreColumns: [3, 4, 5]}, {ID: 2, Unique: false, KeyColumns: [{ID: 1, Dir: ASC}], KeySuffixColumns: [2]}, {ID: 3, Unique: false, KeyColumns: [{ID: 2, Dir: ASC}], KeySuffixColumns: [1]}, {ID: 4, Unique: false, KeyColumns: [{ID: 4, Dir: ASC}], KeySuffixColumns: [1, 2]}, {ID: 5, Unique: false, KeyColumns: [{ID: 5, Dir: ASC}], KeySuffixColumns: [1, 2]}, {ID: 6, Unique: true, KeyColumns: [{ID: 4, Dir: ASC}, {ID: 5, Dir: ASC}], KeySuffixColumns: [1, 2]}]}
+I250327 20:30:24.099720 2524 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720535097345] 179 ={"Timestamp":1743107424099719000,"EventType":"status_change","JobID":1058527720535097345,"JobType":"SCHEMA CHANGE","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.099728 2548 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720533590017] 180 ={"Timestamp":1743107424099727000,"EventType":"status_change","JobID":1058527720533590017,"JobType":"SCHEMA CHANGE","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.099786 2414 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720534376449] 181 ={"Timestamp":1743107424099785000,"EventType":"status_change","JobID":1058527720534376449,"JobType":"SCHEMA CHANGE","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.100026 2524 sql/schema_changer.go:824  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720535097345,scExec,id=23] 182  schema change on "role_members" (v2) starting execution...
+I250327 20:30:24.100044 2414 sql/schema_changer.go:824  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720534376449,scExec,id=33] 183  schema change on "role_options" (v2) starting execution...
+I250327 20:30:24.100055 2548 sql/schema_changer.go:824  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720533590017,scExec,id=4] 184  schema change on "users" (v2) starting execution...
+I250327 20:30:24.100269 2414 sql/schema_changer.go:1481  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720534376449,scExec,id=33] 185  waiting for a single version...
+I250327 20:30:24.100290 2548 sql/schema_changer.go:1481  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720533590017,scExec,id=4] 186  waiting for a single version...
+I250327 20:30:24.100304 2524 sql/schema_changer.go:1481  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720535097345,scExec,id=23] 187  waiting for a single version...
+I250327 20:30:24.100822 2548 sql/catalog/lease/lease.go:479  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720533590017,scExec,id=4] 188  all leases have expired at 1743107424.100389000,1: desc=[{users 4 1}]
+I250327 20:30:24.100819 2524 sql/catalog/lease/lease.go:479  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720535097345,scExec,id=23] 189  all leases have expired at 1743107424.100406000,1: desc=[{role_members 23 1}]
+I250327 20:30:24.100838 2548 sql/schema_changer.go:1486  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720533590017,scExec,id=4] 190  waiting for a single version... done (at v 2), took 547.583µs
+I250327 20:30:24.100846 2524 sql/schema_changer.go:1486  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720535097345,scExec,id=23] 191  waiting for a single version... done (at v 2), took 542µs
+I250327 20:30:24.100849 2548 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720533590017] 192  SCHEMA CHANGE job 1058527720533590017: stepping through state succeeded
+I250327 20:30:24.100854 2524 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720535097345] 193  SCHEMA CHANGE job 1058527720535097345: stepping through state succeeded
+I250327 20:30:24.100878 2414 sql/catalog/lease/lease.go:479  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720534376449,scExec,id=33] 194  all leases have expired at 1743107424.100352000,1: desc=[{role_options 33 1}]
+I250327 20:30:24.100891 2414 sql/schema_changer.go:1486  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720534376449,scExec,id=33] 195  waiting for a single version... done (at v 2), took 622.416µs
+I250327 20:30:24.100899 2414 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720534376449] 196  SCHEMA CHANGE job 1058527720534376449: stepping through state succeeded
+I250327 20:30:24.107149 2414 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720534376449] 197 ={"Timestamp":1743107424107148000,"EventType":"status_change","JobID":1058527720534376449,"JobType":"SCHEMA CHANGE","Description":"state changed to: succeeded","PreviousStatus":"running","NewStatus":"succeeded","RunNum":0}
+I250327 20:30:24.107153 2548 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720533590017] 198 ={"Timestamp":1743107424107153000,"EventType":"status_change","JobID":1058527720533590017,"JobType":"SCHEMA CHANGE","Description":"state changed to: succeeded","PreviousStatus":"running","NewStatus":"succeeded","RunNum":0}
+I250327 20:30:24.107297 2524 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720535097345] 199 ={"Timestamp":1743107424107296000,"EventType":"status_change","JobID":1058527720535097345,"JobType":"SCHEMA CHANGE","Description":"state changed to: succeeded","PreviousStatus":"running","NewStatus":"succeeded","RunNum":0}
+I250327 20:30:24.113423 2372 jobs/wait.go:148  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 200  waited for 3 [1058527720533590017 1058527720534376449 1058527720535097345] queued jobs to complete 21.16975ms
+I250327 20:30:24.115441 2372 sql/table.go:117  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 201  queued new database schema change job 1058527720621473793 for database 104
+I250327 20:30:24.116667 2372 7@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 202 ={"Timestamp":1743107424115004000,"EventType":"alter_default_privileges","Statement":"ALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO sinklessfeeduser","Tag":"ALTER DEFAULT PRIVILEGES","User":"root","DescriptorID":104,"GrantedPrivileges":["SELECT"],"DatabaseName":"d","RoleName":"root"}
+I250327 20:30:24.116707 2372 jobs/wait.go:56  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 203  waiting for 1 [1058527720621473793] queued jobs to complete
+I250327 20:30:24.116724 2670 jobs/adopt.go:224  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root,job=1058527720621473793] 204  job 1058527720621473793: resuming execution
+I250327 20:30:24.117027 2620 sql/catalog/lease/descriptor_state.go:135  [n1] 205  new lease: dbdesc.immutable: {ID: 104, Version: 2, ModificationTime: "1743107424.115004000,0", State: PUBLIC}
+I250327 20:30:24.122050 2689 jobs/adopt.go:224  [T1,Vsystem,n1,job=1058527720621473793] 206  job 1058527720621473793: resuming execution
+I250327 20:30:24.122370 2803 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720621473793] 207  SCHEMA CHANGE job 1058527720621473793: stepping through state running
+I250327 20:30:24.123848 2803 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720621473793] 208 ={"Timestamp":1743107424123847000,"EventType":"status_change","JobID":1058527720621473793,"JobType":"SCHEMA CHANGE","Description":"state changed to: running","PreviousStatus":"running","NewStatus":"running","RunNum":0}
+I250327 20:30:24.124043 2803 sql/schema_changer.go:824  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720621473793,scExec,id=104] 209  schema change on "d" (v2) starting execution...
+I250327 20:30:24.124057 2803 sql/schema_changer.go:1481  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720621473793,scExec,id=104] 210  waiting for a single version...
+I250327 20:30:24.124487 2803 sql/catalog/lease/lease.go:479  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720621473793,scExec,id=104] 211  all leases have expired at 1743107424.124127000,1: desc=[{d 104 1}]
+I250327 20:30:24.124500 2803 sql/schema_changer.go:1486  [T1,Vsystem,n1,job=SCHEMA CHANGE id=1058527720621473793,scExec,id=104] 212  waiting for a single version... done (at v 2), took 443.125µs
+I250327 20:30:24.124508 2803 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720621473793] 213  SCHEMA CHANGE job 1058527720621473793: stepping through state succeeded
+I250327 20:30:24.130872 2803 1@jobs/structured_log.go:49  [T1,Vsystem,n1,job=1058527720621473793] 214 ={"Timestamp":1743107424130872000,"EventType":"status_change","JobID":1058527720621473793,"JobType":"SCHEMA CHANGE","Description":"state changed to: succeeded","PreviousStatus":"running","NewStatus":"succeeded","RunNum":0}
+I250327 20:30:24.136440 2372 jobs/wait.go:148  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 215  waited for 1 [1058527720621473793] queued jobs to complete 19.720666ms
+    helpers_test.go:1175: pgURL sinkless SinklessFeedUser
+    helpers_test.go:1175: pgURL sinkless root
+I250327 20:30:24.138231 2372 5@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 216 ={"Timestamp":1743107424137600000,"EventType":"create_table","Statement":"CREATE TABLE d.public.foo (a INT8 PRIMARY KEY)","Tag":"CREATE TABLE","User":"root","DescriptorID":106,"TableName":"d.public.foo"}
+I250327 20:30:24.192806 2425 4@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser] 217 ={"Timestamp":1743107424192804000,"EventType":"client_authentication_ok","InstanceID":1,"Network":"tcp","RemoteAddress":"127.0.0.1:59759","SessionID":"1830c2f7880be3080000000000000001","Transport":"hostssl","User":"sinklessfeeduser","SystemIdentity":"sinklessfeeduser","Method":"cert-password"}
+    testfeed_test.go:291: sinkless feed creating changefeed: CREATE CHANGEFEED FOR TABLE foo
+I250327 20:30:24.196361 3026 12@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser] 218 ={"Timestamp":1743107424196359000,"EventType":"create_changefeed","Description":"EXPERIMENTAL CHANGEFEED FOR TABLE foo","SinkType":"core","NumTables":1,"Resolved":"no","InitialScan":"yes"}
+I250327 20:30:24.196732 3026 ccl/changefeedccl/changefeed_dist.go:414  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser] 219  using bulk oracle for DistSQL planning
+I250327 20:30:24.196907 3026 ccl/changefeedccl/changefeed_dist.go:577  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser] 220  changefeed plan diagram: https://cockroachdb.github.io/distsqlplan/decode.html#eJyUkV2L4jAUhu_3V5RzndKk1VVz5bKy4MWuy64wF1KGNDmtYWrTSVKcofS_D23nQwUFL89Hn_fpSQvuuQQOci-qAnNExQMKBCqj8I84oAO-AwYpgdoaic4Z27faYWGtXoBTArqqG9-3UwLSWATegte-RODwcwD_KAqLhfDGRj1doRe6HNgPwss9umDHUh5EW5GVGDH6PWpZGHeQdgRM47_wzosCgbMTn_UKOO3IvUq_rKm8Rhuxc6FN43mwjMkyIcvJVYH4QoDdI_APXW0qh2fB15LoRVLIupQAqgLHh3CmsRL_WiOH3bHcDKChodD5ccrGYl19jJy3KA6f9zslsZuk-BYpJZCX5vioFXBIKEsWs0UW4pzOw4maz8JMTUUoM8wTlSDFqYT-A1G4_kT_9-Y4YLevdf-DuSgdEvgtnnCFHu1BV9p5Ld8nXfftLQAA___PluZn
+I250327 20:30:24.197029 3007 ccl/changefeedccl/kvfeed/kv_feed.go:332  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser,change-aggregator] 221  kv feed run starting
+I250327 20:30:24.197720 3002 12@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser,change-aggregator] 222 ={"Timestamp":1743107424197720000,"EventType":"changefeed_emitted_bytes","Description":"EXPERIMENTAL CHANGEFEED FOR TABLE foo","SinkType":"core","NumTables":1,"Resolved":"no","InitialScan":"yes","EmittedBytes":22,"EmittedMessages":1,"LoggingInterval":86400000000000}
+I250327 20:30:24.332505 3002 ccl/changefeedccl/changefeed_processors.go:1701  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser,change-frontier] 223  maybeCheckpointJob hit
+    changefeed_test.go:8297: RaiseRetryableError running
+I250327 20:30:24.332543 3002 ccl/changefeedccl/changefeed_processors.go:1726  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser,change-frontier] 224  updateCheckpoint %!b(bool=false)
+I250327 20:30:24.332553 3002 ccl/changefeedccl/changefeed_processors.go:1727  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser,change-frontier] 225  updateHighWater %!b(bool=true)
+    testfeed_test.go:298: closing sinkless feed
+W250327 20:30:24.335558 3097 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser,change-aggregator,mux_n=1,gen=2] 226  error closing mux rangefeed client: context canceled
+E250327 20:30:24.335658 3004 ccl/changefeedccl/kvfeed/kv_feed.go:158  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser,change-aggregator] 227  stopping kv feed due to error: context canceled
+I250327 20:30:24.335682 3002 12@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser,change-aggregator] 228 ={"Timestamp":1743107424335681000,"EventType":"changefeed_emitted_bytes","Description":"EXPERIMENTAL CHANGEFEED FOR TABLE foo","SinkType":"core","NumTables":1,"Resolved":"no","InitialScan":"yes","EmittedBytes":277788,"EmittedMessages":10000,"LoggingInterval":86400000000000,"Closing":true}
+I250327 20:30:24.335720 3026 ccl/changefeedccl/changefeed_stmt.go:431  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser] 229  core changefeed failed due to error: context canceled
+I250327 20:30:24.335745 3026 12@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser] 231 ={"Timestamp":1743107424335745000,"EventType":"changefeed_failed","Description":"EXPERIMENTAL CHANGEFEED FOR TABLE foo","FailureType":"connection_closed"}
+I250327 20:30:24.335712 2783 4@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59759,hostssl,user=sinklessfeeduser] 230 ={"Timestamp":1743107424335698000,"EventType":"client_session_end","InstanceID":1,"Network":"tcp","RemoteAddress":"127.0.0.1:59759","SessionID":"1830c2f7880be3080000000000000001","Duration":148124000}
+W250327 20:30:24.336124 1816 kv/kvserver/intentresolver/intent_resolver.go:881  [-] 232  failed to gc transaction record: could not GC completed transaction anchored at /Table/15/1/100/0: node unavailable; try another peer
+I250327 20:30:24.336171 1861 jobs/registry.go:1681  [T1,Vsystem,n1,job=103] 233  AUTO UPDATE SQL ACTIVITY job 103: stepping through state succeeded
+I250327 20:30:24.336253 595 server/start_listen.go:112  [T1,Vsystem,n1] 234  server shutting down: instructing cmux to stop accepting
+W250327 20:30:24.336294 839 sql/sqlliveness/slinstance/slinstance.go:331  [T1,Vsystem,n1] 235  exiting heartbeat loop
+W250327 20:30:24.336303 839 sql/sqlliveness/slinstance/slinstance.go:318  [T1,Vsystem,n1] 236  exiting heartbeat loop with error: node unavailable; try another peer
+E250327 20:30:24.336313 839 server/server_sql.go:519  [T1,Vsystem,n1] 237  failed to run update of instance with new session ID: node unavailable; try another peer
+W250327 20:30:24.336360 1861 jobs/adopt.go:454  [T1,Vsystem,n1] 239  could not clear job claim: clear-job-claim: node unavailable; try another peer
+I250327 20:30:24.336336 2217 sql/stats/automatic_stats.go:748  [T1,Vsystem,n1] 238  quiescing stats garbage collector
+W250327 20:30:24.336372 2665 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=tenant-settings-watcher,mux_n=1,gen=2] 240  error closing mux rangefeed client: context canceled
+E250327 20:30:24.336383 1918 jobs/registry.go:934  [T1,Vsystem,n1] 241  error getting live session: node unavailable; try another peer
+W250327 20:30:24.336351 2227 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=table-stats-cache,mux_n=1,gen=2] 242  error closing mux rangefeed client: context canceled
+I250327 20:30:24.336402 2393 4@util/log/event_log.go:39  [T1,Vsystem,n1,client=127.0.0.1:59758,hostssl,user=root] 243 ={"Timestamp":1743107424336399000,"EventType":"client_session_end","InstanceID":1,"Network":"tcp","RemoteAddress":"127.0.0.1:59758","SessionID":"1830c2f78173ce980000000000000001","Duration":259456209}
+W250327 20:30:24.336414 2006 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=spanconfig-subscriber,mux_n=1,gen=2] 244  error closing mux rangefeed client: context canceled
+W250327 20:30:24.336428 848 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=lease,mux_n=1,gen=2] 246  error closing mux rangefeed client: context canceled
+W250327 20:30:24.336440 1152 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=sql_instances,mux_n=1,gen=2] 247  error closing mux rangefeed client: context canceled
+W250327 20:30:24.336416 2043 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=system-config-cache,mux_n=1,gen=2] 245  error closing mux rangefeed client: context canceled
+I250327 20:30:24.336454 1875 jobs/registry.go:1681  [T1,Vsystem,n1,job=100] 248  KEY VISUALIZER job 100: stepping through state succeeded
+W250327 20:30:24.336466 1803 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,job=AUTO SPAN CONFIG RECONCILIATION id=1058527720240349185,rangefeed=sql-watcher-protected-ts-records-rangefeed,mux_n=1,gen=2] 249  error closing mux rangefeed client: context canceled
+W250327 20:30:24.336468 1930 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,job=AUTO SPAN CONFIG RECONCILIATION id=1058527720240349185,rangefeed=sql-watcher-descriptor-rangefeed,mux_n=1,gen=2] 250  error closing mux rangefeed client: context canceled
+W250327 20:30:24.336464 1933 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=settings-watcher,mux_n=1,gen=2] 253  error closing mux rangefeed client: context canceled
+W250327 20:30:24.336458 2357 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=tenant-boundaries-watcher,mux_n=1,gen=2] 252  error closing mux rangefeed client: context canceled
+W250327 20:30:24.336471 1911 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,job=AUTO SPAN CONFIG RECONCILIATION id=1058527720240349185,rangefeed=sql-watcher-zones-rangefeed,mux_n=1,gen=2] 251  error closing mux rangefeed client: context canceled
+W250327 20:30:24.336532 2717 kv/kvclient/kvcoord/dist_sender_mux_rangefeed.go:406  [T1,Vsystem,n1,rangefeed=tenant-entry-watcher,mux_n=1,gen=2] 254  error closing mux rangefeed client: context canceled
+I250327 20:30:24.336554 1689 jobs/registry.go:1681  [T1,Vsystem,n1,job=1058527720240349185] 255  AUTO SPAN CONFIG RECONCILIATION job 1058527720240349185: stepping through state succeeded
+I250327 20:30:24.341614 71 server/server_controller.go:409  [T1,Vsystem,n1] 256  server controller shutting down
+I250327 20:30:24.341631 71 server/server_controller.go:418  [T1,Vsystem,n1] 257  waiting for tenant servers to report stopped
+W250327 20:30:24.341713 71 server/server_sql.go:1793  [T1,Vsystem,n1] 258  server shutdown without a prior graceful drain
+=== NAME  TestCoreChangefeedBackfillScanCheckpoint
+    changefeed_test.go:8315: -- test log scope end --
+--- PASS: TestCoreChangefeedBackfillScanCheckpoint (0.39s)
+    --- PASS: TestCoreChangefeedBackfillScanCheckpoint/sinkless (0.37s)
+PASS
+================================================================================
+//pkg/ccl/changefeedccl:changefeedccl_test                               PASSED in 0.6s
+
+Executed 1 out of 1 test: 1 test passes.
+There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.
