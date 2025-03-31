@@ -3386,7 +3386,7 @@ func (k kafkaManager) startTopicConsumers(
 
 				// Exclude resolved messages from computing duplicates.
 				// The resolved timestamp messages will have an empty key.
-				if !len(m.Key) == 0 {
+				if len(m.Key) != 0 {
 					rowKey := fmt.Sprintf(`%s: %s`, string(m.Key), string(m.Value))
 					if _, exists := seenRows[rowKey]; exists {
 						numDuplicates++
