@@ -179,6 +179,10 @@ func (f *CoordinatorFrontier) All() iter.Seq[jobspb.ResolvedSpan] {
 func (f *CoordinatorFrontier) MakeCheckpoint(
 	maxBytes int64, metrics *checkpoint.Metrics,
 ) *jobspb.TimestampSpansMap {
+	log.Infof(context.Background(), "AMF: creating checkpoint, max bytes %d metric exist? %t", maxBytes, metrics != nil)
+	for s, ts := range f.Entries() {
+		log.Infof(context.Background(), "AMF: checkpoint entry span: %s ts: %s", s, ts)
+	}
 	return checkpoint.Make(f.Frontier(), f.Entries(), maxBytes, metrics)
 }
 
@@ -309,6 +313,7 @@ func (f *resolvedSpanFrontier) assertBoundaryNotEarlier(
 // by whether the frontier trails the latest timestamp by at least
 // changefeedbase.SpanCheckpointLagThreshold.
 func (f *resolvedSpanFrontier) HasLaggingSpans(sv *settings.Values) bool {
+	log.Infof(context.Background(), "AMF: checking lagging spans")
 	lagThresholdNanos := int64(changefeedbase.SpanCheckpointLagThreshold.Get(sv))
 	if lagThresholdNanos == 0 {
 		return false

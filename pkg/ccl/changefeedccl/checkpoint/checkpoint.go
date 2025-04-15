@@ -8,11 +8,13 @@
 package checkpoint
 
 import (
+	"context"
 	"iter"
 
 	"github.com/cockroachdb/cockroach/pkg/jobs/jobspb"
 	"github.com/cockroachdb/cockroach/pkg/roachpb"
 	"github.com/cockroachdb/cockroach/pkg/util/hlc"
+	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/cockroach/pkg/util/timeutil"
 	"github.com/cockroachdb/errors"
 )
@@ -60,6 +62,8 @@ func Make(
 	}
 
 	if metrics != nil {
+		// look here
+		log.Infof(context.Background(), "AMF: metrics create nanos %d, total bytes: %d, span count %d", int64(timeutil.Since(start)), cp.Size(), cp.SpanCount())
 		metrics.CreateNanos.RecordValue(int64(timeutil.Since(start)))
 		metrics.TotalBytes.RecordValue(int64(cp.Size()))
 		metrics.SpanCount.RecordValue(int64(cp.SpanCount()))
@@ -75,11 +79,13 @@ type SpanForwarder interface {
 
 // Restore restores the saved progress from a checkpoint to the given SpanForwarder.
 func Restore(sf SpanForwarder, checkpoint *jobspb.TimestampSpansMap) error {
+	log.Infof(context.Background(), "AF: restore checkpoint %s", checkpoint.String())
 	for ts, spans := range checkpoint.All() {
 		if ts.IsEmpty() {
 			return errors.New("checkpoint timestamp is empty")
 		}
 		for _, sp := range spans {
+			log.Infof(context.Background(), "AF: restore checkpoint span %s ts %s", sp.String(), ts.String())
 			if _, err := sf.Forward(sp, ts); err != nil {
 				return err
 			}
