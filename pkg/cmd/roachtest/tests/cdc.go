@@ -996,6 +996,125 @@ const (
 	cdcShutdownCheckpoint
 )
 
+// runCDCFineGrainedCheckpointingBenchmark runs a changefeed
+// on a 4-node cluster, using node 1 as the coordinator. It will split the
+// table into many ranges and start a sink which will be artificially slower
+// on some of the ranges so that our fine grained checkpoints are exercised.
+// This sink will also occasionally error which should force restarts and
+// restore from these fine-grained checkpoints.
+func runCDCFineGrainedCheckpointingBenchmark(
+	ctx context.Context, t test.Test, c cluster.Cluster,
+) {
+
+	ips, err := c.ExternalIP(ctx, t.L(), c.Node(1))
+	sinkURL := fmt.Sprintf("https://%s:%d", ips[0], debug.WebhookServerPort)
+	sink := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c.Start(ctx, t.L(), option.DefaultStartOpts(), install.MakeClusterSettings())
+	m := c.NewMonitor(ctx, c.All())
+
+	db := c.Conn(ctx, t.L(), 1)
+
+	// Setup a table with 1M rows.
+	const (
+		rowCount = 1000000
+	)
+	t.L().Printf("setting up test data...")
+	setupStmts := []string{
+		fmt.Sprintf(`CREATE TABLE foo (id PRIMARY KEY) AS SELECT generate_series(1, %d) id`, rowCount),
+		// `ALTER TABLE foo SCATTER`,
+	}
+	setupStmts = append(setupStmts)
+	// `SET CLUSTER SETTING changefeed.span_checkpoint.interval = '1s'`,
+	// `SET CLUSTER SETTING changefeed.shutdown_checkpoint.enabled = 'false'`,
+
+	for _, s := range setupStmts {
+		t.L().Printf(s)
+		if _, err := db.Exec(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.L().Printf("test data is setup")
+
+	// Run the sink server.
+	m.Go(func(ctx context.Context) error {
+		t.L().Printf("starting up sink server at %s...", sinkURL)
+		err := c.RunE(ctx, option.WithNodes(c.Node(1)), "./cockroach workload debug webhook-server")
+		if err != nil {
+			return err
+		}
+		t.L().Printf("sink server exited")
+		return nil
+	})
+
+	wait := make(chan struct{})
+
+	// Run the changefeed, then ask the sink how many rows it saw.
+	var unique int
+	func() {
+		defer close(wait)
+		defer func() {
+			_, err := sink.Get(sinkURL + "/exit")
+			t.L().Printf("exiting webhook sink status: %v", err)
+		}()
+
+		t.L().Printf("starting changefeed...")
+		var job int
+		if err := db.QueryRow(
+			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true' WITH initial_scan='only'", sinkURL),
+		).Scan(&job); err != nil {
+			t.Fatal(err)
+		}
+
+		t.L().Printf("waiting for changefeed %d...", job)
+		if _, err := db.ExecContext(ctx, "SHOW JOB WHEN COMPLETE $1", job); err != nil {
+			t.Fatal(err)
+		}
+
+		t.L().Printf("changefeed complete, checking sink...")
+		get := func(p string) (int, error) {
+			b, err := sink.Get(sinkURL + p)
+			if err != nil {
+				return 0, err
+			}
+			body, err := io.ReadAll(b.Body)
+			if err != nil {
+				return 0, err
+			}
+			i, err := strconv.Atoi(string(body))
+			if err != nil {
+				return 0, err
+			}
+			return i, nil
+		}
+		unique, err = get("/unique")
+		if err != nil {
+			t.Fatal(err)
+		}
+		dupes, err := get("/dupes")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.L().Printf("sink got %d unique, %d dupes", unique, dupes)
+		expected := rowCount
+		if unique != expected {
+			t.Fatalf("expected %d, got %d", expected, unique)
+		}
+		_, err = sink.Get(sinkURL + "/reset")
+		t.L().Printf("resetting sink %v", err)
+
+	}()
+
+	<-wait
+	// TODO(#116314)
+	if runtime.GOOS != "darwin" {
+		m.Wait()
+	}
+}
+
 // runCDCInitialScanRollingRestart runs multiple initial-scan-only changefeeds
 // on a 4-node cluster, using node 1 as the coordinator and continuously
 // restarting nodes 2-4 to hopefully force the changefeed to replan and exercise
@@ -1473,6 +1592,17 @@ func registerCDC(r registry.Registry) {
 		Timeout:          30 * time.Minute,
 		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
 			runCDCInitialScanRollingRestart(ctx, t, c, cdcShutdownCheckpoint)
+		},
+	})
+	r.Add(registry.TestSpec{
+		Name:             "cdc/fine-grained-checkpointing",
+		Owner:            registry.OwnerCDC,
+		Cluster:          r.MakeClusterSpec(4),
+		CompatibleClouds: registry.OnlyGCE,
+		Suites:           registry.Suites(registry.Nightly),
+		Timeout:          7 * time.Minute,
+		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
+			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c)
 		},
 	})
 	r.Add(registry.TestSpec{
