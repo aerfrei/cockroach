@@ -1031,7 +1031,8 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		`SET CLUSTER SETTING changefeed.span_checkpoint.interval = '1s'`,
 		`SET CLUSTER SETTING changefeed.shutdown_checkpoint.enabled = 'false'`,
 		`SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '1s'`,
-		`SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`)
+		`SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`,
+		`SET CLUSTER SETTING kv.rangefeed.enabled = true`)
 
 	for _, s := range setupStmts {
 		t.L().Printf(s)
