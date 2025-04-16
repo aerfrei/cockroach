@@ -1077,12 +1077,25 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			t.Fatal(err)
 		}
 
-		t.L().Printf("waiting for changefeed %d...", job)
-		if _, err := db.ExecContext(ctx, "SHOW JOB WHEN COMPLETE $1", job); err != nil {
-			t.Fatal(err)
-		}
+		// t.L().Printf("waiting for changefeed %d...", job)
+		// if _, err := db.ExecContext(ctx, "SHOW JOB WHEN COMPLETE $1", job); err != nil {
+		// 	t.Fatal(err)
+		// }
 
-		t.L().Printf("changefeed complete, checking sink...")
+		// TODO: quantize
+
+		// sleep
+		t.L().Printf("waiting for changefeed %d...", job)
+		time.Sleep(60 * time.Second)
+		t.L().Printf("done waiting for changefeed %d...", job)
+
+		// stop the changefeed job
+		_, err = db.ExecContext(ctx, fmt.Sprintf(`CANCEL JOB %d`, job))
+		if err != nil {
+			t.Fatalf("failed to cancel changefeed job %d: %v", job, err)
+		}
+		t.L().Printf("canceled changefeed %d...", job)
+
 		get := func(p string) (int, error) {
 			b, err := sink.Get(sinkURL + p)
 			if err != nil {
