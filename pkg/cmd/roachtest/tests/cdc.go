@@ -1005,7 +1005,6 @@ const (
 func runCDCFineGrainedCheckpointingBenchmark(
 	ctx context.Context, t test.Test, c cluster.Cluster,
 ) {
-
 	ips, err := c.ExternalIP(ctx, t.L(), c.Node(1))
 	sinkURL := fmt.Sprintf("https://%s:%d", ips[0], debug.WebhookServerPort)
 	sink := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
@@ -1018,6 +1017,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 
 	db := c.Conn(ctx, t.L(), 1)
 
+	// TODO: do we actually want to do this?
 	// Setup a table with 1M rows.
 	const (
 		rowCount = 1000000
@@ -1027,9 +1027,11 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		fmt.Sprintf(`CREATE TABLE foo (id PRIMARY KEY) AS SELECT generate_series(1, %d) id`, rowCount),
 		// `ALTER TABLE foo SCATTER`,
 	}
-	setupStmts = append(setupStmts)
-	// `SET CLUSTER SETTING changefeed.span_checkpoint.interval = '1s'`,
-	// `SET CLUSTER SETTING changefeed.shutdown_checkpoint.enabled = 'false'`,
+	setupStmts = append(setupStmts,
+		`SET CLUSTER SETTING changefeed.span_checkpoint.interval = '1s'`,
+		`SET CLUSTER SETTING changefeed.shutdown_checkpoint.enabled = 'false'`,
+		`SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '1s'`,
+		`SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`)
 
 	for _, s := range setupStmts {
 		t.L().Printf(s)
@@ -1042,7 +1044,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 	// Run the sink server.
 	m.Go(func(ctx context.Context) error {
 		t.L().Printf("starting up sink server at %s...", sinkURL)
-		err := c.RunE(ctx, option.WithNodes(c.Node(1)), "./cockroach workload debug webhook-server")
+		err := c.RunE(ctx, option.WithNodes(c.Node(1)), "./cockroach workload debug webhook-server-slow")
 		if err != nil {
 			return err
 		}
@@ -1064,8 +1066,13 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		t.L().Printf("starting changefeed...")
 		var job int
 		if err := db.QueryRow(
-			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true' WITH initial_scan='only'", sinkURL),
+			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true'", sinkURL),
 		).Scan(&job); err != nil {
+			t.Fatal(err)
+		}
+
+		t.L().Printf("Inserting values into table foo...")
+		if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series($1,$2)`, rowCount+1, rowCount*2); err != nil {
 			t.Fatal(err)
 		}
 
@@ -1098,7 +1105,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.L().Printf("sink got %d unique, %d dupes", unique, dupes)
+		t.L().Printf("slow sink got %d unique, %d dupes", unique, dupes)
 		expected := rowCount
 		if unique != expected {
 			t.Fatalf("expected %d, got %d", expected, unique)
