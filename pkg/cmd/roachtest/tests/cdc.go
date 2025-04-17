@@ -1020,7 +1020,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 	// TODO: do we actually want to do this?
 	// Setup a table with 1M rows.
 	const (
-		rowCount = 1000000
+		rowCount = 1_000_000
 	)
 	t.L().Printf("setting up test data...")
 	setupStmts := []string{
@@ -1033,7 +1033,8 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		`SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '1s'`,
 		`SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`,
 		`SET CLUSTER SETTING changefeed.resolved_timestamp.granularity = '100ms'`,
-		`SET CLUSTER SETTING kv.rangefeed.enabled = true`)
+		`SET CLUSTER SETTING kv.rangefeed.enabled = true`,
+		`ALTER TABLE foo SPLIT AT VALUES (250000, 500000, 750000)`)
 
 	for _, s := range setupStmts {
 		t.L().Printf(s)
@@ -1068,24 +1069,24 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		t.L().Printf("starting changefeed...")
 		var job int
 		if err := db.QueryRow(
-			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true'", sinkURL),
+			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true' WITH initial_scan='only'", sinkURL),
 		).Scan(&job); err != nil {
 			t.Fatal(err)
 		}
 
-		t.L().Printf("Inserting values into table foo...")
-		if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series($1,$2)`, rowCount+1, rowCount*2); err != nil {
-			t.Fatal(err)
-		}
-
-		// t.L().Printf("waiting for changefeed %d...", job)
-		// if _, err := db.ExecContext(ctx, "SHOW JOB WHEN COMPLETE $1", job); err != nil {
+		// t.L().Printf("Inserting values into table foo...")
+		// if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series($1,$2)`, 1, rowCount); err != nil {
 		// 	t.Fatal(err)
 		// }
 
 		t.L().Printf("waiting for changefeed %d...", job)
-		time.Sleep(60 * time.Second)
-		t.L().Printf("done waiting for changefeed %d...", job)
+		if _, err := db.ExecContext(ctx, "SHOW JOB WHEN COMPLETE $1", job); err != nil {
+			t.Fatal(err)
+		}
+
+		// t.L().Printf("waiting for changefeed %d...", job)
+		// time.Sleep(60 * time.Second)
+		// t.L().Printf("done waiting for changefeed %d...", job)
 
 		get := func(p string) (int, error) {
 			b, err := sink.Get(sinkURL + p)
@@ -1103,19 +1104,19 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			return i, nil
 		}
 
-		for i := 0; i < 10; i++ {
-			t.L().Printf("waiting for changefeed %d...", job)
-			unique, err = get("/unique")
-			if err != nil {
-				t.Fatal(err)
-			}
-			dupes, err := get("/dupes")
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.L().Printf("update: slow sink got %d unique, %d dupes", unique, dupes)
-			time.Sleep(10 * time.Second)
-		}
+		// for i := 0; i < 10; i++ {
+		// 	t.L().Printf("waiting for changefeed %d...", job)
+		// 	unique, err = get("/unique")
+		// 	if err != nil {
+		// 		t.Fatal(err)
+		// 	}
+		// 	dupes, err := get("/dupes")
+		// 	if err != nil {
+		// 		t.Fatal(err)
+		// 	}
+		// 	t.L().Printf("update: slow sink got %d unique, %d dupes", unique, dupes)
+		// 	time.Sleep(10 * time.Second)
+		// }
 
 		t.L().Printf("done waiting for changefeed %d...", job)
 

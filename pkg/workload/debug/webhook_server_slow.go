@@ -70,16 +70,25 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			}
 			d = dupes
 		}()
+
+		for _, i := range req.Payload {
+			id := i.After.ID
+			// TODO: don't hardcode the range
+			if id > 25000 && id < 50000 {
+				// Simulate a slow range
+				time.Sleep(time.Second)
+			}
+		}
+
 		const printEvery = 10_000
 		if before/printEvery != after/printEvery {
 			log.Printf("keys seen: %d (%d dupes); %.1f MB", after, d, float64(size)/float64(1<<20))
 		}
-		if (after*7+13)%100 == 0 {
-			log.Printf("!!throwing")
+
+		// TODO: this is a pseudo-random yet consistent way to trigger restarts
+		if (after*7+13)%10_000 == 0 {
 			http.Error(w, "retryable error for test", 500)
 		}
-
-		time.Sleep(1 * time.Second)
 	})
 	mux.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
 		func() {
