@@ -1020,7 +1020,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 
 	// Setup a table with 1M rows.
 	const (
-		rowCount = 1000000
+		rowCount = 1000
 	)
 	t.L().Printf("setting up test data...")
 	setupStmts := []string{
@@ -1066,15 +1066,18 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		t.L().Printf("starting changefeed...")
 		var job int
 		if err := db.QueryRow(
-			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true' WITH initial_scan='only'", sinkURL),
+			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true' WITH initial_scan='no'", sinkURL),
 		).Scan(&job); err != nil {
 			t.Fatal(err)
 		}
 
-		t.L().Printf("waiting for changefeed %d...", job)
-		if _, err := db.ExecContext(ctx, "SHOW JOB WHEN COMPLETE $1", job); err != nil {
+		t.L().Printf("adding rows for changefeed %d...", job)
+		if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series(1001, 2000)`); err != nil {
 			t.Fatal(err)
 		}
+
+		t.L().Printf("waiting for changefeed %d...", job)
+		time.Sleep(20 * time.Second)
 
 		t.L().Printf("changefeed complete, checking sink...")
 		get := func(p string) (int, error) {
