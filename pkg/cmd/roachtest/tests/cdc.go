@@ -1044,7 +1044,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 	// Run the sink server.
 	m.Go(func(ctx context.Context) error {
 		t.L().Printf("starting up sink server at %s...", sinkURL)
-		err := c.RunE(ctx, option.WithNodes(c.Node(1)), "./cockroach workload debug webhook-server")
+		err := c.RunE(ctx, option.WithNodes(c.Node(1)), "./cockroach workload debug webhook-server-slow")
 		if err != nil {
 			return err
 		}
