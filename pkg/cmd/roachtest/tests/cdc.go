@@ -1032,6 +1032,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		`SET CLUSTER SETTING changefeed.shutdown_checkpoint.enabled = 'false'`,
 		`SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '1s'`,
 		`SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`,
+		`SET CLUSTER SETTING changefeed.resolved_timestamp.granularity = '100ms'`,
 		`SET CLUSTER SETTING kv.rangefeed.enabled = true`)
 
 	for _, s := range setupStmts {
@@ -1082,19 +1083,9 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		// 	t.Fatal(err)
 		// }
 
-		// TODO: quantize
-
-		// sleep
 		t.L().Printf("waiting for changefeed %d...", job)
 		time.Sleep(60 * time.Second)
 		t.L().Printf("done waiting for changefeed %d...", job)
-
-		// // stop the changefeed job
-		// _, err = db.ExecContext(ctx, fmt.Sprintf(`CANCEL JOB %d`, job))
-		// if err != nil {
-		// 	t.Fatalf("failed to cancel changefeed job %d: %v", job, err)
-		// }
-		// t.L().Printf("canceled changefeed %d...", job)
 
 		get := func(p string) (int, error) {
 			b, err := sink.Get(sinkURL + p)
@@ -1111,6 +1102,23 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 			return i, nil
 		}
+
+		for i := 0; i < 10; i++ {
+			t.L().Printf("waiting for changefeed %d...", job)
+			unique, err = get("/unique")
+			if err != nil {
+				t.Fatal(err)
+			}
+			dupes, err := get("/dupes")
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.L().Printf("update: slow sink got %d unique, %d dupes", unique, dupes)
+			time.Sleep(10 * time.Second)
+		}
+
+		t.L().Printf("done waiting for changefeed %d...", job)
+
 		unique, err = get("/unique")
 		if err != nil {
 			t.Fatal(err)
@@ -1119,7 +1127,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.L().Printf("slow sink got %d unique, %d dupes", unique, dupes)
+		t.L().Printf("final: slow sink got %d unique, %d dupes", unique, dupes)
 		expected := rowCount
 		if unique != expected {
 			t.Fatalf("expected %d, got %d", expected, unique)
