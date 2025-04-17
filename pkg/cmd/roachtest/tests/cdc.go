@@ -1020,7 +1020,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 
 	// Setup a table with 1M rows.
 	const (
-		rowCount = 1000
+		rowCount = 500
 	)
 	t.L().Printf("setting up test data...")
 	setupStmts := []string{
@@ -1072,7 +1072,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		}
 
 		t.L().Printf("adding rows for changefeed %d...", job)
-		if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series(1001, 2000)`); err != nil {
+		if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series(501, 6000)`); err != nil {
 			t.Fatal(err)
 		}
 
@@ -1104,7 +1104,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			t.Fatal(err)
 		}
 		t.L().Printf("sink got %d unique, %d dupes", unique, dupes)
-		expected := rowCount
+		expected := 5500
 		if unique != expected {
 			t.Fatalf("expected %d, got %d", expected, unique)
 		}
