@@ -1034,7 +1034,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		`SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`,
 		`SET CLUSTER SETTING changefeed.resolved_timestamp.granularity = '100ms'`,
 		`SET CLUSTER SETTING kv.rangefeed.enabled = true`,
-		`ALTER TABLE foo SPLIT AT VALUES (250000, 500000, 750000)`)
+		`ALTER TABLE foo SPLIT AT VALUES (250000)`)
 
 	for _, s := range setupStmts {
 		t.L().Printf(s)
