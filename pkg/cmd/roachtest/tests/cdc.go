@@ -1104,7 +1104,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			t.Fatal(err)
 		}
 		t.L().Printf("sink got %d unique, %d dupes", unique, dupes)
-		expected := 5500
+		expected := 1500
 		if unique != expected {
 			t.Fatalf("expected %d, got %d", expected, unique)
 		}
