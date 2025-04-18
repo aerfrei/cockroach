@@ -21,7 +21,7 @@ import (
 var webhookServerSlowCmd = &cobra.Command{
 	Use:   "webhook-server-slow",
 	Short: "webhook-server-slow opens an http server on 3000 to which cdc's webhook can emit a table with a numeric unique 'id' column",
-	RunE:  webhookServer,
+	RunE:  webhookServerSlow,
 	Args:  cobra.NoArgs,
 }
 
