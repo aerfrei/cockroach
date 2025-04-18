@@ -32,7 +32,7 @@ const (
 func webhookServerSlow(cmd *cobra.Command, args []string) error {
 	var (
 		mu    syncutil.Mutex
-		seen  = map[int]struct{}{}
+		seen  = map[string]struct{}{}
 		size  int64
 		dupes int
 	)
@@ -75,18 +75,19 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			// TODO(cdc): add check for ordering guarantees using resolved timestamps and event timestamps
 			for _, i := range req.Payload {
 				id := i.After.ID
-				log.Printf("AMF: seeing i", i)
-				if _, ok := seen[i.After.ID]; !ok {
-					seen[i.After.ID] = struct{}{}
+				seenKey := fmt.Sprintf("%d-%s", id, i.Updated)
+				if _, ok := seen[seenKey]; !ok {
+					seen[seenKey] = struct{}{}
 					after++
-					log.Printf("AMF: seen %d for the first time", id)
+
 					if id > 100 {
 						time.Sleep(sleepDurations[id/100])
 					}
-					if (id+i.After.VAL)%117 == 0 {
+					if (id+i.After.VAL)%317 == 0 {
 						http.Error(w, "transient sink error", 500)
 						return
 					}
+
 				} else {
 					log.Printf("AMF: seen %d dupe", id)
 					dupes++
@@ -106,7 +107,7 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 		func() {
 			mu.Lock()
 			defer mu.Unlock()
-			seen = make(map[int]struct{}, len(seen))
+			seen = make(map[string]struct{}, len(seen))
 			dupes = 0
 			size = 0
 		}()

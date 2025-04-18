@@ -1083,7 +1083,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		t.L().Printf("starting changefeed...")
 		var job int
 		if err := db.QueryRow(
-			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true' WITH initial_scan='no'", sinkURL),
+			fmt.Sprintf("CREATE CHANGEFEED FOR TABLE foo INTO 'webhook-%s/?insecure_tls_skip_verify=true' WITH initial_scan='no', updated", sinkURL),
 		).Scan(&job); err != nil {
 			t.Fatal(err)
 		}
@@ -1109,7 +1109,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 		}
 
-		maxVal := 10
+		maxVal := 5
 		for c := 1; c <= maxVal; c++ {
 			for i := 0; i < spanCount; i++ {
 				for j := 1; j < 100; j++ {
@@ -1121,7 +1121,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		}
 
 		t.L().Printf("waiting for changefeed %d...", job)
-		time.Sleep(20 * time.Second)
+		time.Sleep(120 * time.Second)
 
 		t.L().Printf("changefeed complete, checking sink...")
 		get := func(p string) (int, error) {
@@ -1148,11 +1148,10 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			t.Fatal(err)
 		}
 		t.L().Printf("sink got %d unique, %d dupes", unique, dupes)
-		// TODO: put this back
-		// expected := 1500
-		// if unique != expected {
-		// 	t.Fatalf("expected %d, got %d", expected, unique)
-		// }
+		expected := 99 * spanCount * (maxVal + 1)
+		if unique != expected {
+			t.Fatalf("expected %d, got %d", expected, unique)
+		}
 		_, err = sink.Get(sinkURL + "/reset")
 		t.L().Printf("resetting sink %v", err)
 
