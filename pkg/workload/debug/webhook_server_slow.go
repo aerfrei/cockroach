@@ -66,8 +66,10 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					seen[i.After.ID] = struct{}{}
 					after++
 					log.Printf("AMF: seen %d for the first time", id)
-					http.Error(w, "transient sink error", 500)
-					return
+					if id%17 == 0 {
+						http.Error(w, "transient sink error", 500)
+						return
+					}
 				} else {
 					log.Printf("AMF: seen %d dupe", id)
 					dupes++
