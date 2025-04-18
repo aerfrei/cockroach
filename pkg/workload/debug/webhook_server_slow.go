@@ -49,7 +49,7 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					ID  int `json:"id"`
 					VAL int `json:"val"`
 				} `json:"before"`
-				Updated int `json:"updated"`
+				Updated string `json:"updated"`
 			} `json:"payload"`
 		}
 
@@ -58,6 +58,12 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			log.Printf("AMF: error decoding body: %v", err)
 			return
+		}
+
+		sleepDurations := []time.Duration{
+			0 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond,
+			0 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond,
+			0 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond,
 		}
 
 		var before, after, d int
@@ -69,17 +75,15 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			// TODO(cdc): add check for ordering guarantees using resolved timestamps and event timestamps
 			for _, i := range req.Payload {
 				id := i.After.ID
-				updated := i.Updated
-				log.Printf("AMF: seeing id %d updated %d", id, updated)
+				log.Printf("AMF: seeing i", i)
 				if _, ok := seen[i.After.ID]; !ok {
 					seen[i.After.ID] = struct{}{}
 					after++
 					log.Printf("AMF: seen %d for the first time", id)
-					if id < 1201 && id > 1000 {
-						log.Printf("AMF: sleeping for %d (200 ms)", id)
-						time.Sleep(time.Millisecond * 200)
+					if id > 100 {
+						time.Sleep(sleepDurations[id/100])
 					}
-					if id%17 == 0 {
+					if (id+i.After.VAL)%117 == 0 {
 						http.Error(w, "transient sink error", 500)
 						return
 					}
