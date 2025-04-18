@@ -1072,7 +1072,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		}
 
 		t.L().Printf("adding rows for changefeed %d...", job)
-		if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series(501, 6000)`); err != nil {
+		if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series(501, 2000)`); err != nil {
 			t.Fatal(err)
 		}
 

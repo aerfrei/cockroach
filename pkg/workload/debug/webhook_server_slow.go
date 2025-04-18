@@ -6,25 +6,19 @@
 package debug
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/big"
 	"net/http"
 	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/cli/exit"
 	"github.com/cockroachdb/cockroach/pkg/util/syncutil"
-	"github.com/cockroachdb/cockroach/pkg/util/timeutil"
 	"github.com/spf13/cobra"
 )
 
-var webhookServerCmd = &cobra.Command{
+var webhookServerSlowCmd = &cobra.Command{
 	Use:   "webhook-server-slow",
 	Short: "webhook-server-slow opens an http server on 3000 to which cdc's webhook can emit a table with a numeric unique 'id' column",
 	RunE:  webhookServer,
@@ -32,10 +26,10 @@ var webhookServerCmd = &cobra.Command{
 }
 
 const (
-	WebhookServerPort = 9707
+	WebhookServerSlowPort = 9707
 )
 
-func webhookServer(cmd *cobra.Command, args []string) error {
+func webhookServerSlow(cmd *cobra.Command, args []string) error {
 	var (
 		mu    syncutil.Mutex
 		seen  = map[int]struct{}{}
@@ -56,7 +50,7 @@ func webhookServer(cmd *cobra.Command, args []string) error {
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			log.Printf("decoding body: %v", err)
+			log.Printf("AMF: error decoding body: %v", err)
 			return
 		}
 		var before, after, d int
@@ -67,14 +61,17 @@ func webhookServer(cmd *cobra.Command, args []string) error {
 			after = before
 			// TODO(cdc): add check for ordering guarantees using resolved timestamps and event timestamps
 			for _, i := range req.Payload {
+				id := i.After.ID
 				if _, ok := seen[i.After.ID]; !ok {
 					seen[i.After.ID] = struct{}{}
 					after++
-					if after%101 == 0 {
+					log.Printf("AMF: seen %d for the first time", id)
+					if id%101 == 0 {
 						http.Error(w, "transient sink error", 500)
 						return
 					}
 				} else {
+					log.Printf("AMF: seen %d dupe", id)
 					dupes++
 				}
 			}
@@ -83,9 +80,9 @@ func webhookServer(cmd *cobra.Command, args []string) error {
 			}
 			d = dupes
 		}()
-		const printEvery = 10000
+		const printEvery = 100
 		if before/printEvery != after/printEvery {
-			log.Printf("keys seen: %d (%d dupes); %.1f MB", after, d, float64(size)/float64(1<<20))
+			log.Printf("AMF: keys seen: %d (%d dupes); %.1f MB", after, d, float64(size)/float64(1<<20))
 		}
 	})
 	mux.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
@@ -96,18 +93,20 @@ func webhookServer(cmd *cobra.Command, args []string) error {
 			dupes = 0
 			size = 0
 		}()
+		log.Printf("AMF: reset")
 		log.Printf("reset")
 	})
 	mux.HandleFunc("/unique", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
 		l := len(seen)
-		log.Printf("keys seen: %d", l)
+		log.Printf("AMF: keys seen: %d", l)
 		fmt.Fprintf(w, "%d", l)
 	})
 	mux.HandleFunc("/dupes", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
+		log.Printf("AMF: dupes: %d", dupes)
 		fmt.Fprintf(w, "%d", dupes)
 	})
 
@@ -123,35 +122,10 @@ func webhookServer(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("starting server on port %d", WebhookServerPort)
+	log.Printf("starting server on port %d", WebhookServerSlowPort)
 	return (&http.Server{
 		TLSConfig: &tls.Config{Certificates: []tls.Certificate{cert}},
 		Handler:   mux,
-		Addr:      fmt.Sprintf(":%d", WebhookServerPort),
+		Addr:      fmt.Sprintf(":%d", WebhookServerSlowPort),
 	}).ListenAndServeTLS("", "")
-}
-
-func genKeyPair() (tls.Certificate, error) {
-	now := timeutil.Now()
-	tpl := &x509.Certificate{
-		Subject:               pkix.Name{CommonName: "localhost"},
-		SerialNumber:          big.NewInt(now.Unix()),
-		NotBefore:             now,
-		NotAfter:              now.AddDate(0, 0, 30), // Valid for one day
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-	}
-
-	k, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-
-	cert, err := x509.CreateCertificate(rand.Reader, tpl, tpl, k.Public(), k)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-	return tls.Certificate{PrivateKey: k, Certificate: [][]byte{cert}}, nil
 }
