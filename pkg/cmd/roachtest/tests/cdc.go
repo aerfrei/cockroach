@@ -1101,10 +1101,24 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		rows.Close()
 		t.L().Printf("this many rows after: %d", n)
 
-		// t.L().Printf("adding rows for changefeed %d...", job)
-		// if _, err := db.ExecContext(ctx, `INSERT INTO foo select * from generate_series(501, 2000)`); err != nil {
-		// 	t.Fatal(err)
-		// }
+		for i := 0; i < spanCount; i++ {
+			for j := 1; j < 100; j++ {
+				if _, err := db.Exec(fmt.Sprintf("INSERT INTO foo VALUES (%d, %d)", i*100+j, 0)); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+
+		maxVal := 10
+		for c := 1; c <= maxVal; c++ {
+			for i := 0; i < spanCount; i++ {
+				for j := 1; j < 100; j++ {
+					if _, err := db.Exec(fmt.Sprintf("UPDATE foo SET val = %d WHERE id = %d", c, i*100+j)); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+		}
 
 		t.L().Printf("waiting for changefeed %d...", job)
 		time.Sleep(20 * time.Second)
