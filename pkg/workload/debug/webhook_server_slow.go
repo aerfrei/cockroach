@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/cli/exit"
@@ -22,7 +23,7 @@ var webhookServerSlowCmd = &cobra.Command{
 	Use:   "webhook-server-slow",
 	Short: "webhook-server-slow opens an http server on 3000 to which cdc's webhook can emit a table with a numeric unique 'id' column",
 	RunE:  webhookServerSlow,
-	Args:  cobra.NoArgs,
+	Args:  cobra.MinimumNArgs(1),
 }
 
 const (
@@ -36,6 +37,7 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 		size  int64
 		dupes int
 	)
+	log.Printf("AMF: starting webhook server with args %s", args)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -60,12 +62,6 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			return
 		}
 
-		sleepDurations := []time.Duration{
-			0 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond,
-			0 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond,
-			0 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond,
-		}
-
 		var before, after, d int
 		func() {
 			mu.Lock()
@@ -80,9 +76,12 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					seen[seenKey] = struct{}{}
 					after++
 
-					if id > 100 {
-						time.Sleep(sleepDurations[id/100])
+					numMS, err := strconv.Atoi(args[id/100])
+
+					if err != nil {
+						time.Sleep(time.Duration(numMS) * time.Millisecond)
 					}
+
 					if (id+i.After.VAL)%317 == 0 {
 						http.Error(w, "transient sink error", 500)
 						return

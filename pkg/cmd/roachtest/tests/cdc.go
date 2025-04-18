@@ -1005,7 +1005,6 @@ const (
 func runCDCFineGrainedCheckpointingBenchmark(
 	ctx context.Context, t test.Test, c cluster.Cluster,
 ) {
-
 	ips, err := c.ExternalIP(ctx, t.L(), c.Node(1))
 	sinkURL := fmt.Sprintf("https://%s:%d", ips[0], debug.WebhookServerPort)
 	sink := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
@@ -1033,7 +1032,10 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		`SET CLUSTER SETTING kv.rangefeed.enabled = true`,
 	}
 
-	spanCount := 10
+	// duration in ms
+	durations := []string{"10", "20", "30", "40", "50", "60", "70", "80", "90", "100"}
+
+	spanCount := len(durations)
 	for i := 0; i < spanCount; i++ {
 		setupStmts = append(setupStmts, fmt.Sprintf("INSERT INTO foo VALUES (%d, 0)", i*100))
 		setupStmts = append(setupStmts, fmt.Sprintf("ALTER TABLE foo SPLIT AT VALUES (%d)", i*100))
@@ -1061,7 +1063,8 @@ func runCDCFineGrainedCheckpointingBenchmark(
 	// Run the sink server.
 	m.Go(func(ctx context.Context) error {
 		t.L().Printf("starting up sink server at %s...", sinkURL)
-		err := c.RunE(ctx, option.WithNodes(c.Node(1)), "./cockroach workload debug webhook-server-slow")
+		err := c.RunE(ctx, option.WithNodes(c.Node(1)),
+			fmt.Sprintf("./cockroach workload debug webhook-server-slow %s", strings.Join(durations, " ")))
 		if err != nil {
 			return err
 		}
