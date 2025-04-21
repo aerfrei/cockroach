@@ -20,10 +20,10 @@ import (
 )
 
 var webhookServerSlowCmd = &cobra.Command{
-	Use:   "webhook-server-slow",
+	Use:   "webhook-server-slow [transient error freq ms] ...[range delays ms]",
 	Short: "webhook-server-slow opens an http server on 3000 to which cdc's webhook can emit a table with a numeric unique 'id' column",
 	RunE:  webhookServerSlow,
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.MinimumNArgs(0),
 }
 
 const (
@@ -37,6 +37,42 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 		size  int64
 		dupes int
 	)
+	// Add a variable to track the last time a transient error occurred.
+	lastTransientErrorTime := time.Now()
+
+	const (
+		defaultTransientErrorFrequency = 1000 // Default transient error frequency in ms
+	)
+	defaultRangeDelays := []time.Duration{} // Default range delays in ms (no delay)
+
+	// Parse the arguments
+	transientErrorFrequency := defaultTransientErrorFrequency
+	rangeDelays := defaultRangeDelays
+
+	if len(args) > 0 {
+		if freq, err := strconv.Atoi(args[0]); err == nil {
+			transientErrorFrequency = freq
+		} else {
+			log.Printf("Invalid transient error frequency, using default: %d ms", defaultTransientErrorFrequency)
+		}
+	}
+
+	if len(args) > 1 {
+		rangeDelays = make([]time.Duration, len(args[1:]))
+		for i, delay := range args[1:] {
+			if d, err := strconv.Atoi(delay); err == nil {
+				rangeDelays[i] = time.Duration(d) * time.Millisecond
+			} else {
+				log.Printf("Invalid range delay at index %d, using default: 0 ms", i)
+				rangeDelays[i] = 0 * time.Millisecond
+			}
+		}
+	}
+
+	// Log the parsed or default values
+	log.Printf("Transient Error Frequency: %d ms", transientErrorFrequency)
+	log.Printf("Range Delays: %v ms", rangeDelays)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -60,6 +96,14 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			return
 		}
 
+		now := time.Now()
+		if now.Sub(lastTransientErrorTime) >= time.Duration(transientErrorFrequency)*time.Millisecond {
+			lastTransientErrorTime = now
+			log.Printf("AMF: transient error")
+			http.Error(w, "transient sink error", http.StatusInternalServerError)
+			return
+		}
+
 		var before, after, d int
 		func() {
 			mu.Lock()
@@ -76,21 +120,9 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					after++
 
 					sleepDurationIndex := id / 100
-					sleepDuration := args[sleepDurationIndex]
-					numMS, err := strconv.Atoi(sleepDuration)
-
-					if err == nil {
-						sleepTime := time.Duration(numMS) * time.Millisecond
-						time.Sleep(sleepTime)
-					} else {
-						log.Printf("we got an error decoding %v", err)
+					if sleepDurationIndex < len(rangeDelays) {
+						time.Sleep(rangeDelays[sleepDurationIndex])
 					}
-
-					if (101*id+11*i.After.VAL)%97 == 0 {
-						http.Error(w, "transient sink error", 500)
-						return
-					}
-
 				} else {
 					dupes++
 				}

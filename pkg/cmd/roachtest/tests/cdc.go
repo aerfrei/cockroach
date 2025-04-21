@@ -1044,11 +1044,13 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		}
 	}
 
+	transientErrorFrequency := 3 * time.Second
+
 	// Run the sink server.
 	m.Go(func(ctx context.Context) error {
 		t.L().Printf("starting up sink server at %s...", sinkURL)
 		err := c.RunE(ctx, option.WithNodes(c.Node(1)),
-			fmt.Sprintf("./cockroach workload debug webhook-server-slow %s", strings.Join(durations, " ")))
+			fmt.Sprintf("./cockroach workload debug webhook-server-slow %d %s", transientErrorFrequency.Milliseconds(), strings.Join(durations, " ")))
 		if err != nil {
 			return err
 		}
