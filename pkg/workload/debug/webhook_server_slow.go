@@ -37,7 +37,6 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 		size  int64
 		dupes int
 	)
-	log.Printf("AMF: starting webhook server with args %s", args)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -58,7 +57,6 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			log.Printf("AMF: error decoding body: %v", err)
 			return
 		}
 
@@ -88,7 +86,6 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					}
 
 				} else {
-					log.Printf("AMF: seen %d dupe", id)
 					dupes++
 				}
 			}
@@ -99,7 +96,7 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 		}()
 		const printEvery = 100
 		if before/printEvery != after/printEvery {
-			log.Printf("AMF: keys seen: %d (%d dupes); %.1f MB", after, d, float64(size)/float64(1<<20))
+			log.Printf("keys seen: %d (%d dupes); %.1f MB", after, d, float64(size)/float64(1<<20))
 		}
 	})
 	mux.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
@@ -110,20 +107,17 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			dupes = 0
 			size = 0
 		}()
-		log.Printf("AMF: reset")
 		log.Printf("reset")
 	})
 	mux.HandleFunc("/unique", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
 		l := len(seen)
-		log.Printf("AMF: keys seen: %d", l)
 		fmt.Fprintf(w, "%d", l)
 	})
 	mux.HandleFunc("/dupes", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
-		log.Printf("AMF: dupes: %d", dupes)
 		fmt.Fprintf(w, "%d", dupes)
 	})
 

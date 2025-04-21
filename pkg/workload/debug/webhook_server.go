@@ -70,10 +70,6 @@ func webhookServer(cmd *cobra.Command, args []string) error {
 				if _, ok := seen[i.After.ID]; !ok {
 					seen[i.After.ID] = struct{}{}
 					after++
-					if after%101 == 0 {
-						http.Error(w, "transient sink error", 500)
-						return
-					}
 				} else {
 					dupes++
 				}

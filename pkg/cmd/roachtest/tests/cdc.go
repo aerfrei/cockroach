@@ -1017,10 +1017,6 @@ func runCDCFineGrainedCheckpointingBenchmark(
 
 	db := c.Conn(ctx, t.L(), 1)
 
-	// Setup a table with 1M rows.
-	const (
-		rowCount = 500
-	)
 	t.L().Printf("setting up test data...")
 	setupStmts := []string{
 		`CREATE TABLE foo (id INT PRIMARY KEY, val INT)`,
@@ -1048,18 +1044,6 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		}
 	}
 
-	rows, err := db.Query("SHOW RANGES FROM TABLE foo;")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.L().Printf("1 - show ranges from table foo:", rows)
-	n := 0
-	for rows.Next() {
-		n++
-	}
-	rows.Close()
-	t.L().Printf("this many rows before: %d", n)
-
 	// Run the sink server.
 	m.Go(func(ctx context.Context) error {
 		t.L().Printf("starting up sink server at %s...", sinkURL)
@@ -1068,7 +1052,6 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		if err != nil {
 			return err
 		}
-		t.L().Printf("sink server exited")
 		return nil
 	})
 
@@ -1090,19 +1073,6 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		).Scan(&job); err != nil {
 			t.Fatal(err)
 		}
-
-		rows, err := db.Query("SHOW RANGES FROM TABLE foo;")
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.L().Printf("show ranges from table foo:", rows)
-
-		n := 0
-		for rows.Next() {
-			n++
-		}
-		rows.Close()
-		t.L().Printf("this many rows after: %d", n)
 
 		var inserts []string
 		for i := 0; i < spanCount; i++ {
