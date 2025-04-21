@@ -119,7 +119,7 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					seen[seenKey] = struct{}{}
 					after++
 
-					sleepDurationIndex := id / 100
+					sleepDurationIndex := id / 10
 					if sleepDurationIndex < len(rangeDelays) {
 						time.Sleep(rangeDelays[sleepDurationIndex])
 					}

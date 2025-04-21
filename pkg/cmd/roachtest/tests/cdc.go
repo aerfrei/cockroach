@@ -1029,13 +1029,20 @@ func runCDCFineGrainedCheckpointingBenchmark(
 	}
 
 	// duration in ms
-	durations := []string{"1", "1", "2", "2", "3", "3"}
+	durations := []string{"1", "0", "5", "0", "10", "0", "30", "100"}
+	spanCount := len(durations) + 10
 
-	spanCount := len(durations)
+	values := []string{}
 	for i := 0; i < spanCount; i++ {
-		setupStmts = append(setupStmts, fmt.Sprintf("INSERT INTO foo VALUES (%d, 0)", i*100))
-		setupStmts = append(setupStmts, fmt.Sprintf("ALTER TABLE foo SPLIT AT VALUES (%d)", i*100))
+		values = append(values, fmt.Sprintf("(%d, 0)", i*10))
 	}
+	setupStmts = append(setupStmts, fmt.Sprintf("INSERT INTO foo VALUES %s", strings.Join(values, ", ")))
+
+	splitPoints := []string{}
+	for i := 0; i < spanCount; i++ {
+		splitPoints = append(splitPoints, fmt.Sprintf("(%d)", i*10))
+	}
+	setupStmts = append(setupStmts, fmt.Sprintf("ALTER TABLE foo SPLIT AT VALUES %s", strings.Join(splitPoints, ", ")))
 
 	for _, s := range setupStmts {
 		t.L().Printf(s)
@@ -1078,10 +1085,13 @@ func runCDCFineGrainedCheckpointingBenchmark(
 
 		var inserts []string
 		for i := 0; i < spanCount; i++ {
-			for j := 1; j < 100; j++ {
-				inserts = append(inserts, fmt.Sprintf("(%d, 0)", i*100+j))
+			for j := 1; j < 10; j++ {
+				inserts = append(inserts, fmt.Sprintf("(%d, 0)", i*10+j))
 			}
 		}
+
+		t.L().Printf("I'd expect span count (%d) * 9 = %d", spanCount, 9*spanCount)
+		t.L().Printf("inserted %d rows...", len(inserts))
 
 		sql := "INSERT INTO foo (id, val) VALUES " + strings.Join(inserts, ",")
 		if _, err := db.Exec(sql); err != nil {
@@ -1090,13 +1100,9 @@ func runCDCFineGrainedCheckpointingBenchmark(
 
 		maxVal := 5
 		for c := 1; c <= maxVal; c++ {
-			for i := 0; i < spanCount; i++ {
-				start := i*100 + 1
-				end := (i+1)*100 - 1
-				if _, err := db.Exec(fmt.Sprintf(
-					"UPDATE foo SET val = %d WHERE id BETWEEN %d AND %d", c, start, end)); err != nil {
-					t.Fatal(err)
-				}
+			if _, err := db.Exec(fmt.Sprintf(
+				"UPDATE foo SET val = %d", c)); err != nil {
+				t.Fatal(err)
 			}
 		}
 
@@ -1117,7 +1123,8 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 			return i, nil
 		}
-		expected := 99 * spanCount * (maxVal + 1)
+		expected := 10*spanCount*(maxVal+1) - spanCount
+		t.L().Printf("expecting %d rows", expected)
 
 		testutils.SucceedsWithin(t, func() error {
 			unique, err = get("/unique")
