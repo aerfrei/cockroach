@@ -1029,7 +1029,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 	}
 
 	// duration in ms
-	durations := []string{"1", "3", "10", "33", "100", "100", "100"}
+	durations := []string{"1", "1", "2", "2", "3", "3"}
 
 	spanCount := len(durations)
 	for i := 0; i < spanCount; i++ {

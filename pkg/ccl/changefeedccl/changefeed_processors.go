@@ -776,9 +776,9 @@ func (ca *changeAggregator) Next() (rowenc.EncDatumRow, *execinfrapb.ProducerMet
 			}
 			// Shut down the poller if it wasn't already.
 			ca.cancel()
-			if log.V(2) {
-				log.Infof(ca.Ctx(), "change aggregator moving to draining due to error from tick: %v", err)
-			}
+			// if log.V(2) {
+			log.Infof(ca.Ctx(), "AF: change aggregator moving to draining due to error from tick: %v", err)
+			// }
 			ca.MoveToDraining(err)
 			break
 		}
@@ -1402,6 +1402,7 @@ func (cf *changeFrontier) Start(ctx context.Context) {
 		return
 	}
 
+	log.Infof(cf.Ctx(), "AF: change frontier initialiing with slc %s", cf.spec.SpanLevelCheckpoint.String())
 	if err := checkpoint.Restore(cf.frontier, cf.spec.SpanLevelCheckpoint); err != nil {
 		if log.V(2) {
 			log.Infof(cf.Ctx(), "change frontier encountered error on checkpoint restore: %v", err)

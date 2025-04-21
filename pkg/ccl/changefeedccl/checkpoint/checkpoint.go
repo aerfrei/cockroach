@@ -79,11 +79,13 @@ type SpanForwarder interface {
 
 // Restore restores the saved progress from a checkpoint to the given SpanForwarder.
 func Restore(sf SpanForwarder, checkpoint *jobspb.TimestampSpansMap) error {
+	log.Infof(context.Background(), "AF: restore checkpoint %s", checkpoint.String())
 	for ts, spans := range checkpoint.All() {
 		if ts.IsEmpty() {
 			return errors.New("checkpoint timestamp is empty")
 		}
 		for _, sp := range spans {
+			log.Infof(context.Background(), "AF: restore checkpoint span %s ts %s", sp.String(), ts.String())
 			if _, err := sf.Forward(sp, ts); err != nil {
 				return err
 			}
