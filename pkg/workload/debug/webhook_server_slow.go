@@ -70,17 +70,23 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			for _, i := range req.Payload {
 				id := i.After.ID
 				seenKey := fmt.Sprintf("%d-%s", id, i.Updated)
+				log.Printf("seen key %s", seenKey)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
-					numMS, err := strconv.Atoi(args[id/100])
+					sleepDurationIndex := id / 100
+					sleepDuration := args[sleepDurationIndex]
+					numMS, err := strconv.Atoi(sleepDuration)
 
-					if err != nil {
-						time.Sleep(time.Duration(numMS) * time.Millisecond)
+					if err == nil {
+						sleepTime := time.Duration(numMS) * time.Millisecond
+						time.Sleep(sleepTime)
+					} else {
+						log.Printf("we got an error decoding %v", err)
 					}
 
-					if (id+i.After.VAL)%317 == 0 {
+					if (101*id+11*i.After.VAL)%97 == 0 {
 						http.Error(w, "transient sink error", 500)
 						return
 					}

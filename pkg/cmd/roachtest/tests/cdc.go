@@ -1029,7 +1029,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 	}
 
 	// duration in ms
-	durations := []string{"1", "3", "10", "33", "100", "330", "1000", "1000", "3000", "3000"}
+	durations := []string{"1", "3", "10", "33", "100", "100", "100"}
 
 	spanCount := len(durations)
 	for i := 0; i < spanCount; i++ {
@@ -1099,9 +1099,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		}
 
 		t.L().Printf("waiting for changefeed %d...", job)
-		time.Sleep(45 * time.Second)
 
-		t.L().Printf("changefeed complete, checking sink...")
 		get := func(p string) (int, error) {
 			b, err := sink.Get(sinkURL + p)
 			if err != nil {
@@ -1117,22 +1115,29 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 			return i, nil
 		}
-		unique, err = get("/unique")
-		if err != nil {
-			t.Fatal(err)
-		}
-		dupes, err := get("/dupes")
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.L().Printf("sink got %d unique, %d dupes", unique, dupes)
 		expected := 99 * spanCount * (maxVal + 1)
-		if unique != expected {
-			t.Fatalf("expected %d, got %d", expected, unique)
-		}
+
+		testutils.SucceedsWithin(t, func() error {
+			unique, err = get("/unique")
+			if err != nil {
+				return err
+			}
+			dupes, err := get("/dupes")
+			if err != nil {
+				return err
+			}
+			t.L().Printf("sink got %d unique, %d dupes", unique, dupes)
+
+			if unique != expected {
+				return fmt.Errorf("expected %d, got %d", expected, unique)
+			}
+
+			return nil
+		}, 3*time.Minute)
+
+		t.L().Printf("changefeed complete, checking sink...")
 		_, err = sink.Get(sinkURL + "/reset")
 		t.L().Printf("resetting sink %v", err)
-
 	}()
 
 	<-wait
