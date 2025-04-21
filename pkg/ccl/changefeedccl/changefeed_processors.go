@@ -1654,6 +1654,7 @@ func (cf *changeFrontier) noteAggregatorProgress(d rowenc.EncDatum) error {
 }
 
 func (cf *changeFrontier) forwardFrontier(resolved jobspb.ResolvedSpan) error {
+	log.Infof(context.Background(), "AMF: forwardFrontier")
 	frontierChanged, err := cf.frontier.ForwardResolvedSpan(cf.Ctx(), resolved)
 	if err != nil {
 		return err
@@ -1706,6 +1707,7 @@ func (cf *changeFrontier) maybeMarkJobIdle(recentKVCount uint64) {
 func (cf *changeFrontier) maybeCheckpointJob(
 	resolvedSpan jobspb.ResolvedSpan, frontierChanged bool,
 ) (bool, error) {
+	log.Infof(context.Background(), "AMF: maybeCheckpointJob")
 	// When in a Backfill, the frontier remains unchanged at the backfill boundary
 	// as we receive spans from the scan request at the Backfill Timestamp
 	inBackfill := !frontierChanged && cf.frontier.InBackfill(resolvedSpan)
@@ -1717,17 +1719,24 @@ func (cf *changeFrontier) maybeCheckpointJob(
 	updateHighWater :=
 		!inBackfill && (atBoundary || cf.js.canCheckpointHighWatermark(frontierChanged))
 
+	hasLaggingSpans := cf.frontier.HasLaggingSpans(&cf.js.settings.SV)
+
 	// During backfills or when some problematic spans stop advancing, the
 	// highwater mark remains fixed while other spans may significantly outpace
 	// it, therefore to avoid losing that progress on changefeed resumption we
 	// also store as many of those leading spans as we can in the job progress
-	updateCheckpoint := (inBackfill || cf.frontier.HasLaggingSpans(&cf.js.settings.SV)) && cf.js.canCheckpointSpans()
+	updateCheckpoint := (inBackfill || hasLaggingSpans) && cf.js.canCheckpointSpans()
+
+	log.Infof(context.Background(), "AMF: maybeCheckpointJob updateCheckpoint inBackfill hasLaggingSpans %t %t %t", updateCheckpoint, inBackfill, hasLaggingSpans)
 
 	// If the highwater has moved an empty checkpoint will be saved
 	var checkpoint *jobspb.TimestampSpansMap
 	if updateCheckpoint {
+		log.Infof(context.Background(), "AMF: we are making checkpoint")
 		maxBytes := changefeedbase.SpanCheckpointMaxBytes.Get(&cf.FlowCtx.Cfg.Settings.SV)
 		checkpoint = cf.frontier.MakeCheckpoint(maxBytes, cf.sliMetrics.CheckpointMetrics)
+	} else {
+		log.Infof(context.Background(), "AMF: we are NOT making checkpointing")
 	}
 
 	if updateCheckpoint || updateHighWater {
@@ -1735,12 +1744,15 @@ func (cf *changeFrontier) maybeCheckpointJob(
 			return false, nil
 		}
 		checkpointStart := timeutil.Now()
+		log.Infof(context.Background(), "AMF: actually calling checkpoint job progress")
 		updated, err := cf.checkpointJobProgress(cf.frontier.Frontier(), checkpoint, cf.evalCtx.Settings.Version)
 		if err != nil {
 			return false, err
 		}
 		cf.js.checkpointCompleted(cf.Ctx(), timeutil.Since(checkpointStart))
 		return updated, nil
+	} else {
+		log.Infof(context.Background(), "AMF: updateCheckpoint || updateHighWater is false")
 	}
 
 	return false, nil
@@ -1753,11 +1765,15 @@ func (cf *changeFrontier) checkpointJobProgress(
 ) (bool, error) {
 	defer cf.sliMetrics.Timers.CheckpointJobProgress.Start()()
 
+	log.Infof(cf.Ctx(), "AMF: checkpointJobProgress")
+
 	if cf.knobs.RaiseRetryableError != nil {
 		if err := cf.knobs.RaiseRetryableError(); err != nil {
 			return false, changefeedbase.MarkRetryableError(
 				errors.New("cf.knobs.RaiseRetryableError"))
 		}
+	} else {
+		log.Infof(cf.Ctx(), "AMF: knob is nil")
 	}
 
 	updateRunStatus := timeutil.Since(cf.js.lastRunStatusUpdate) > runStatusUpdateFrequency
@@ -1805,20 +1821,19 @@ func (cf *changeFrontier) checkpointJobProgress(
 
 			return nil
 		}); err != nil {
+			log.Infof(cf.Ctx(), "AMF: checkpointJobProgress error: %v", err)
 			return false, err
 		}
 		if ptsUpdated {
 			cf.lastProtectedTimestampUpdate = timeutil.Now()
 		}
-		if log.V(2) {
-			log.Infof(cf.Ctx(), "change frontier persisted highwater=%s and checkpoint=%s",
-				frontier, checkpointStr)
-		}
+		// if log.V(2) {
+		log.Infof(cf.Ctx(), "change frontier persisted highwater=%s and checkpoint=%s",
+			frontier, checkpointStr)
+		// }
+	} else {
+		log.Infof(cf.Ctx(), "AMF: change frontier no job")
 	}
-
-	cf.localState.SetHighwater(frontier)
-	cf.localState.SetCheckpoint(spanLevelCheckpoint)
-
 	return true, nil
 }
 

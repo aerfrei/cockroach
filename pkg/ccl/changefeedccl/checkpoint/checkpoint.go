@@ -8,11 +8,13 @@
 package checkpoint
 
 import (
+	"context"
 	"iter"
 
 	"github.com/cockroachdb/cockroach/pkg/jobs/jobspb"
 	"github.com/cockroachdb/cockroach/pkg/roachpb"
 	"github.com/cockroachdb/cockroach/pkg/util/hlc"
+	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/cockroach/pkg/util/timeutil"
 	"github.com/cockroachdb/errors"
 )
@@ -60,6 +62,8 @@ func Make(
 	}
 
 	if metrics != nil {
+		// look here
+		log.Infof(context.Background(), "AMF: metrics create nanos %d, total bytes: %d, span count %d", int64(timeutil.Since(start)), cp.Size(), cp.SpanCount())
 		metrics.CreateNanos.RecordValue(int64(timeutil.Since(start)))
 		metrics.TotalBytes.RecordValue(int64(cp.Size()))
 		metrics.SpanCount.RecordValue(int64(cp.SpanCount()))

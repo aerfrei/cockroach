@@ -1026,14 +1026,14 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		`CREATE TABLE foo (id INT PRIMARY KEY, val INT)`,
 		`SET CLUSTER SETTING changefeed.span_checkpoint.interval = '1s'`,
 		`SET CLUSTER SETTING changefeed.shutdown_checkpoint.enabled = 'false'`,
-		`SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '1s'`,
+		`SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '100ms'`,
 		`SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`,
 		`SET CLUSTER SETTING changefeed.resolved_timestamp.granularity = '100ms'`,
 		`SET CLUSTER SETTING kv.rangefeed.enabled = true`,
 	}
 
 	// duration in ms
-	durations := []string{"10", "20", "30", "40", "50", "60", "70", "80", "90", "100"}
+	durations := []string{"1", "3", "10", "33", "100", "330", "1000", "1000", "3000", "3000"}
 
 	spanCount := len(durations)
 	for i := 0; i < spanCount; i++ {
@@ -1104,27 +1104,32 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		rows.Close()
 		t.L().Printf("this many rows after: %d", n)
 
+		var inserts []string
 		for i := 0; i < spanCount; i++ {
 			for j := 1; j < 100; j++ {
-				if _, err := db.Exec(fmt.Sprintf("INSERT INTO foo VALUES (%d, %d)", i*100+j, 0)); err != nil {
-					t.Fatal(err)
-				}
+				inserts = append(inserts, fmt.Sprintf("(%d, 0)", i*100+j))
 			}
+		}
+
+		sql := "INSERT INTO foo (id, val) VALUES " + strings.Join(inserts, ",")
+		if _, err := db.Exec(sql); err != nil {
+			t.Fatal(err)
 		}
 
 		maxVal := 5
 		for c := 1; c <= maxVal; c++ {
 			for i := 0; i < spanCount; i++ {
-				for j := 1; j < 100; j++ {
-					if _, err := db.Exec(fmt.Sprintf("UPDATE foo SET val = %d WHERE id = %d", c, i*100+j)); err != nil {
-						t.Fatal(err)
-					}
+				start := i*100 + 1
+				end := (i+1)*100 - 1
+				if _, err := db.Exec(fmt.Sprintf(
+					"UPDATE foo SET val = %d WHERE id BETWEEN %d AND %d", c, start, end)); err != nil {
+					t.Fatal(err)
 				}
 			}
 		}
 
 		t.L().Printf("waiting for changefeed %d...", job)
-		time.Sleep(120 * time.Second)
+		time.Sleep(45 * time.Second)
 
 		t.L().Printf("changefeed complete, checking sink...")
 		get := func(p string) (int, error) {
