@@ -1025,11 +1025,11 @@ func runCDCFineGrainedCheckpointingBenchmark(
 	t.L().Printf("setting up test data...")
 	setupStmts := []string{
 		`CREATE TABLE foo (id INT PRIMARY KEY, val INT)`,
-		`SET CLUSTER SETTING changefeed.span_checkpoint.interval = '1s'`,
-		`SET CLUSTER SETTING changefeed.shutdown_checkpoint.enabled = 'false'`,
-		`SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '100ms'`,
-		`SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`,
-		`SET CLUSTER SETTING changefeed.resolved_timestamp.granularity = '100ms'`,
+		// `SET CLUSTER SETTING changefeed.span_checkpoint.interval = '1s'`,
+		// `SET CLUSTER SETTING changefeed.shutdown_checkpoint.enabled = 'false'`,
+		// `SET CLUSTER SETTING changefeed.frontier_highwater_lag_checkpoint_threshold = '100ms'`,
+		// `SET CLUSTER SETTING changefeed.frontier_checkpoint_frequency = '1s'`,
+		// `SET CLUSTER SETTING changefeed.resolved_timestamp.granularity = '100ms'`,
 		`SET CLUSTER SETTING kv.rangefeed.enabled = true`,
 	}
 
