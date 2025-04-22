@@ -1004,7 +1004,12 @@ const (
 // restore from these fine-grained checkpoints.
 func runCDCFineGrainedCheckpointingBenchmark(
 	ctx context.Context, t test.Test, c cluster.Cluster,
+	numRanges int, transientErrorFrequency time.Duration, rangeDelays []time.Duration,
 ) {
+	if len(rangeDelays) > numRanges {
+		t.Fatalf("too many range delays provided")
+	}
+
 	ips, err := c.ExternalIP(ctx, t.L(), c.Node(1))
 	sinkURL := fmt.Sprintf("https://%s:%d", ips[0], debug.WebhookServerPort)
 	sink := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
@@ -1028,18 +1033,14 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		`SET CLUSTER SETTING kv.rangefeed.enabled = true`,
 	}
 
-	// duration in ms
-	durations := []string{"1", "0", "5", "0", "10", "0", "30", "100"}
-	spanCount := len(durations) + 10
-
 	values := []string{}
-	for i := 0; i < spanCount; i++ {
+	for i := 0; i < numRanges; i++ {
 		values = append(values, fmt.Sprintf("(%d, 0)", i*10))
 	}
 	setupStmts = append(setupStmts, fmt.Sprintf("INSERT INTO foo VALUES %s", strings.Join(values, ", ")))
 
 	splitPoints := []string{}
-	for i := 0; i < spanCount; i++ {
+	for i := 0; i < numRanges; i++ {
 		splitPoints = append(splitPoints, fmt.Sprintf("(%d)", i*10))
 	}
 	setupStmts = append(setupStmts, fmt.Sprintf("ALTER TABLE foo SPLIT AT VALUES %s", strings.Join(splitPoints, ", ")))
@@ -1051,13 +1052,16 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		}
 	}
 
-	transientErrorFrequency := 3 * time.Second
+	delayStrings := []string{}
+	for _, delay := range rangeDelays {
+		delayStrings = append(delayStrings, fmt.Sprint(delay.Milliseconds()))
+	}
 
 	// Run the sink server.
 	m.Go(func(ctx context.Context) error {
 		t.L().Printf("starting up sink server at %s...", sinkURL)
 		err := c.RunE(ctx, option.WithNodes(c.Node(1)),
-			fmt.Sprintf("./cockroach workload debug webhook-server-slow %d %s", transientErrorFrequency.Milliseconds(), strings.Join(durations, " ")))
+			fmt.Sprintf("./cockroach workload debug webhook-server-slow %d %s", transientErrorFrequency.Milliseconds(), strings.Join(delayStrings, " ")))
 		if err != nil {
 			return err
 		}
@@ -1084,13 +1088,13 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		}
 
 		var inserts []string
-		for i := 0; i < spanCount; i++ {
+		for i := 0; i < numRanges; i++ {
 			for j := 1; j < 10; j++ {
 				inserts = append(inserts, fmt.Sprintf("(%d, 0)", i*10+j))
 			}
 		}
 
-		t.L().Printf("I'd expect span count (%d) * 9 = %d", spanCount, 9*spanCount)
+		t.L().Printf("I'd expect span count (%d) * 9 = %d", numRanges, 9*numRanges)
 		t.L().Printf("inserted %d rows...", len(inserts))
 
 		sql := "INSERT INTO foo (id, val) VALUES " + strings.Join(inserts, ",")
@@ -1123,7 +1127,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 			return i, nil
 		}
-		expected := 10*spanCount*(maxVal+1) - spanCount
+		expected := 10*numRanges*(maxVal+1) - numRanges
 		t.L().Printf("expecting %d rows", expected)
 
 		testutils.SucceedsWithin(t, func() error {
@@ -1643,7 +1647,44 @@ func registerCDC(r registry.Registry) {
 		Suites:           registry.Suites(registry.Nightly),
 		Timeout:          7 * time.Minute,
 		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
-			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c)
+			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c, 1000, 500*time.Millisecond,
+				[]time.Duration{
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+				})
+		},
+	})
+	r.Add(registry.TestSpec{
+		Name:             "cdc/fine-grained-checkpointing/big",
+		Owner:            registry.OwnerCDC,
+		Cluster:          r.MakeClusterSpec(4),
+		CompatibleClouds: registry.OnlyGCE,
+		Suites:           registry.Suites(registry.Nightly),
+		Timeout:          7 * time.Minute,
+		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
+			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c, 7000, 200*time.Millisecond,
+				[]time.Duration{
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+					64 * time.Millisecond,
+					128 * time.Millisecond,
+				})
 		},
 	})
 	r.Add(registry.TestSpec{

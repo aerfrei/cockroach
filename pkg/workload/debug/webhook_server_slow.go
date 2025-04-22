@@ -69,6 +69,9 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	log.Printf("AF: Parsed transient error frequency: %d ms", transientErrorFrequency)
+	log.Printf("AF: Parsed range delays: %v ms", rangeDelays)
+
 	// Log the parsed or default values
 	log.Printf("Transient Error Frequency: %d ms", transientErrorFrequency)
 	log.Printf("Range Delays: %v ms", rangeDelays)
@@ -114,14 +117,16 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			for _, i := range req.Payload {
 				id := i.After.ID
 				seenKey := fmt.Sprintf("%d-%s", id, i.Updated)
-				log.Printf("seen key %s", seenKey)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
 					sleepDurationIndex := id / 10
 					if sleepDurationIndex < len(rangeDelays) {
-						time.Sleep(rangeDelays[sleepDurationIndex])
+						timeToSleep := rangeDelays[sleepDurationIndex]
+						log.Printf("AF: Sleeping for %v ms", timeToSleep.Milliseconds())
+						time.Sleep(timeToSleep)
+						log.Printf("AF: Slept for %v ms", timeToSleep.Milliseconds())
 					}
 				} else {
 					dupes++
