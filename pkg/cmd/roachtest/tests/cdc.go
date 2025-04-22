@@ -1190,6 +1190,7 @@ func runCDCInitialScanRollingRestart(
 func runCDCFineGrainedCheckpointingBenchmark(
 	ctx context.Context, t test.Test, c cluster.Cluster,
 	numRanges int, transientErrorFrequency time.Duration, rangeDelays []time.Duration,
+	maxVal int,
 ) {
 	if len(rangeDelays) > numRanges {
 		t.Fatalf("too many range delays provided")
@@ -1279,15 +1280,11 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 		}
 
-		t.L().Printf("I'd expect span count (%d) * 9 = %d", numRanges, 9*numRanges)
-		t.L().Printf("inserted %d rows...", len(inserts))
-
 		sql := "INSERT INTO foo (id, val) VALUES " + strings.Join(inserts, ",")
 		if _, err := db.Exec(sql); err != nil {
 			t.Fatal(err)
 		}
 
-		maxVal := 5
 		for c := 1; c <= maxVal; c++ {
 			if _, err := db.Exec(fmt.Sprintf(
 				"UPDATE foo SET val = %d", c)); err != nil {
@@ -1312,6 +1309,10 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 			return i, nil
 		}
+
+		// 10 keys per range are each updated maxVal + 1 times
+		// except for one key per range which is set to 0 before
+		// the changefeed starts and only updated maxVal times.
 		expected := 10*numRanges*(maxVal+1) - numRanges
 		t.L().Printf("expecting %d rows", expected)
 
@@ -1331,7 +1332,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 
 			return nil
-		}, 3*time.Minute)
+		}, 15*time.Minute)
 
 		t.L().Printf("changefeed complete, checking sink...")
 		_, err = sink.Get(sinkURL + "/reset")
@@ -1641,7 +1642,7 @@ func registerCDC(r registry.Registry) {
 		Cluster:          r.MakeClusterSpec(4),
 		CompatibleClouds: registry.OnlyGCE,
 		Suites:           registry.Suites(registry.Nightly),
-		Timeout:          7 * time.Minute,
+		Timeout:          15 * time.Minute,
 		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
 			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c, 1000, 500*time.Millisecond,
 				[]time.Duration{
@@ -1655,7 +1656,7 @@ func registerCDC(r registry.Registry) {
 					8 * time.Millisecond,
 					16 * time.Millisecond,
 					32 * time.Millisecond,
-				})
+				}, 100)
 		},
 	})
 	r.Add(registry.TestSpec{
@@ -1664,7 +1665,7 @@ func registerCDC(r registry.Registry) {
 		Cluster:          r.MakeClusterSpec(4),
 		CompatibleClouds: registry.OnlyGCE,
 		Suites:           registry.Suites(registry.Nightly),
-		Timeout:          7 * time.Minute,
+		Timeout:          15 * time.Minute,
 		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
 			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c, 7000, 200*time.Millisecond,
 				[]time.Duration{
@@ -1680,7 +1681,7 @@ func registerCDC(r registry.Registry) {
 					32 * time.Millisecond,
 					64 * time.Millisecond,
 					128 * time.Millisecond,
-				})
+				}, 20)
 		},
 	})
 	r.Add(registry.TestSpec{
