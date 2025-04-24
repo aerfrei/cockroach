@@ -1332,7 +1332,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 			}
 
 			return nil
-		}, 15*time.Minute)
+		}, 30*time.Minute)
 
 		t.L().Printf("changefeed complete, checking sink...")
 		_, err = sink.Get(sinkURL + "/reset")
@@ -1659,6 +1659,76 @@ func registerCDC(r registry.Registry) {
 				}, 100)
 		},
 	})
+	r.Add(registry.TestSpec{
+		Name:             "cdc/fine-grained-checkpointing/c",
+		Owner:            registry.OwnerCDC,
+		Cluster:          r.MakeClusterSpec(4),
+		CompatibleClouds: registry.OnlyGCE,
+		Suites:           registry.Suites(registry.Nightly),
+		Timeout:          30 * time.Minute,
+		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
+			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c, 7000, 500*time.Millisecond,
+				[]time.Duration{
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+				}, 100)
+		},
+	})
+	r.Add(registry.TestSpec{
+		Name:             "cdc/fine-grained-checkpointing/b",
+		Owner:            registry.OwnerCDC,
+		Cluster:          r.MakeClusterSpec(4),
+		CompatibleClouds: registry.OnlyGCE,
+		Suites:           registry.Suites(registry.Nightly),
+		Timeout:          15 * time.Minute,
+		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
+			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c, 7000, 500*time.Millisecond,
+				[]time.Duration{
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+				}, 20)
+		},
+	})
+	r.Add(registry.TestSpec{
+		Name:             "cdc/fine-grained-checkpointing/a",
+		Owner:            registry.OwnerCDC,
+		Cluster:          r.MakeClusterSpec(4),
+		CompatibleClouds: registry.OnlyGCE,
+		Suites:           registry.Suites(registry.Nightly),
+		Timeout:          15 * time.Minute,
+		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
+			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c, 7000, 200*time.Millisecond,
+				[]time.Duration{
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+				}, 20)
+		},
+	})
+
 	r.Add(registry.TestSpec{
 		Name:             "cdc/fine-grained-checkpointing/big",
 		Owner:            registry.OwnerCDC,
