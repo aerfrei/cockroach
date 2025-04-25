@@ -1758,6 +1758,29 @@ func registerCDC(r registry.Registry) {
 		},
 	})
 	r.Add(registry.TestSpec{
+		Name:             "cdc/fine-grained-checkpointing/xl",
+		Owner:            registry.OwnerCDC,
+		Cluster:          r.MakeClusterSpec(4),
+		CompatibleClouds: registry.OnlyGCE,
+		Suites:           registry.Suites(registry.Nightly),
+		Timeout:          30 * time.Minute,
+		Run: func(ctx context.Context, t test.Test, c cluster.Cluster) {
+			runCDCFineGrainedCheckpointingBenchmark(ctx, t, c, 100000, 500*time.Millisecond,
+				[]time.Duration{
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+					2 * time.Millisecond,
+					4 * time.Millisecond,
+					8 * time.Millisecond,
+					16 * time.Millisecond,
+					32 * time.Millisecond,
+				}, 5)
+		},
+	})
+	r.Add(registry.TestSpec{
 		Name:             "cdc/tpcc-1000/sink=kafka",
 		Owner:            registry.OwnerCDC,
 		Benchmark:        true,
