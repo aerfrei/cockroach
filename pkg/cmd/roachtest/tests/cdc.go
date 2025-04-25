@@ -1228,12 +1228,7 @@ func runCDCFineGrainedCheckpointingBenchmark(
 		values = append(values, fmt.Sprintf("(%d, 0)", i*10))
 	}
 	setupStmts = append(setupStmts, fmt.Sprintf("INSERT INTO foo VALUES %s", strings.Join(values, ", ")))
-
-	splitPoints := []string{}
-	for i := 0; i < numRanges; i++ {
-		splitPoints = append(splitPoints, fmt.Sprintf("(%d)", i*10))
-	}
-	setupStmts = append(setupStmts, fmt.Sprintf("ALTER TABLE foo SPLIT AT VALUES %s", strings.Join(splitPoints, ", ")))
+	setupStmts = append(setupStmts, fmt.Sprintf("ALTER TABLE foo SPLIT AT SELECT generate_series(0, %d, 10)", numRanges*10))
 
 	for _, s := range setupStmts {
 		t.L().Printf(s)
