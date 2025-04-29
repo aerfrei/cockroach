@@ -139,10 +139,10 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					seen[seenKey] = struct{}{}
 					after++
 
-					if wInt, ok := w.(int); ok {
-						if wInt%2000 < 10 {
+					if wInt, ok := w.(float64); ok {
+						if int(wInt)%2000 < 10 {
 							fmt.Println("w is eligible", wInt)
-							sleepDurationIndex := wInt / 2000
+							sleepDurationIndex := int(wInt / 2000)
 							if sleepDurationIndex < len(rangeDelays) {
 								timeToSleep := rangeDelays[sleepDurationIndex]
 								fmt.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
@@ -152,7 +152,7 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 							}
 						}
 					} else {
-						fmt.Println("w not an int", wInt)
+						fmt.Printf("w not an int: %T", wInt)
 					}
 				} else {
 					dupes++
