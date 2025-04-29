@@ -134,25 +134,36 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 				d := i.Key[2]
 				o := i.Key[3]
 				// fmt.Println(strings.Join(keyParts, "-"), "key")
-				seenKey := fmt.Sprintf("%d-%d-%d-%s", w, d, o, i.Updated)
+				wInt, ok := w.(float64)
+				if !ok {
+					log.Printf("Error: w is not a float64, got type %T", w)
+					return
+				}
+				dInt, ok := d.(float64)
+				if !ok {
+					log.Printf("Error: d is not a float64, got type %T", d)
+					return
+				}
+				oInt, ok := o.(float64)
+				if !ok {
+					log.Printf("Error: o is not a float64, got type %T", o)
+					return
+				}
+				seenKey := fmt.Sprintf("%d-%d-%d-%s", int(wInt), int(dInt), int(oInt), i.Updated)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
-					if wInt, ok := w.(float64); ok {
-						if int(wInt)%2000 < 10 {
-							fmt.Println("w is eligible", wInt)
-							sleepDurationIndex := int(wInt / 2000)
-							if sleepDurationIndex < len(rangeDelays) {
-								timeToSleep := rangeDelays[sleepDurationIndex]
-								fmt.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
-								time.Sleep(timeToSleep)
-							} else {
-								fmt.Println("wInt is too large for rangeDelays", wInt)
-							}
+					if int(wInt)%2000 < 10 {
+						fmt.Println("w is eligible", wInt)
+						sleepDurationIndex := int(wInt / 2000)
+						if sleepDurationIndex < len(rangeDelays) {
+							timeToSleep := rangeDelays[sleepDurationIndex]
+							fmt.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
+							time.Sleep(timeToSleep)
+						} else {
+							fmt.Println("wInt is too large for rangeDelays", wInt)
 						}
-					} else {
-						fmt.Printf("w not an int: %T", wInt)
 					}
 				} else {
 					dupes++
