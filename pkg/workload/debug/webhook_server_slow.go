@@ -131,17 +131,17 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 				for _, part := range i.Key {
 					keyParts = append(keyParts, fmt.Sprintf("%v", part))
 				}
-				o := i.Key[3]
-				d := i.Key[2]
 				w := i.Key[1]
+				d := i.Key[2]
+				o := i.Key[3]
 				fmt.Println(strings.Join(keyParts, "-"), "key")
 				seenKey := fmt.Sprintf("%d-%d-%d-%s", w, d, o, i.Updated)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
-					if oInt, ok := o.(int); ok && oInt%2000 < 10 {
-						sleepDurationIndex := oInt / 2500
+					if wInt, ok := w.(int); ok && wInt%2000 < 10 {
+						sleepDurationIndex := wInt / 2500
 						if sleepDurationIndex < len(rangeDelays) {
 							timeToSleep := rangeDelays[sleepDurationIndex]
 							log.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
