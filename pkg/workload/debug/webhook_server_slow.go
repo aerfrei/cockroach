@@ -165,6 +165,10 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 							fmt.Println("wInt is too large for rangeDelays", wInt)
 						}
 					}
+
+					if int(wInt) > 1500 {
+						fmt.Println("w is greater than 1500", wInt)
+					}
 				} else {
 					dupes++
 				}
