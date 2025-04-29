@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/cli/exit"
@@ -83,30 +83,29 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			Length  int `json:"length"`
 			Payload []struct {
 				After struct {
-					O   int `json:"no_o_id"`
-					D   int `json:"no_d_id"`
-					W   int `json:"no_w_id"`
-					VAL int `json:"val"`
+					CRDBRegion string `json:"crdb_region"`
+					O          int    `json:"no_o_id"`
+					D          int    `json:"no_d_id"`
+					W          int    `json:"no_w_id"`
+					VAL        int    `json:"val"`
 				} `json:"after"`
 				Before struct {
 					ID  int `json:"id"`
 					VAL int `json:"val"`
 				} `json:"before"`
-				Updated string `json:"updated"`
+				Key     []struct{} `json:"key"`
+				Updated string     `json:"updated"`
 			} `json:"payload"`
 		}
 
-		byts, _ := httputil.DumpRequest(r, true)
-		log.Println(string(byts), "request bytes")
+		// byts, _ := httputil.DumpRequest(r, true)
+		// log.Println(string(byts), "request bytes")
 
-		var obj map[string]interface{}
-		// if err := json.Unmarshal(raw, &obj); err != nil {
-		// 	log.Printf("decoding body: %v", err)
-		// }
+		// var obj map[string]interface{}
 
-		err := json.NewDecoder(r.Body).Decode(&obj)
+		err := json.NewDecoder(r.Body).Decode(&req)
 
-		log.Printf("request body obj %s", obj)
+		// log.Printf("request body obj %s", obj)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -131,6 +130,11 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 				o := i.After.O
 				d := i.After.D
 				w := i.After.W
+				var keyParts []string
+				for _, part := range i.Key {
+					keyParts = append(keyParts, fmt.Sprintf("%v", part))
+				}
+				fmt.Printf(strings.Join(keyParts, "-"), "key")
 				seenKey := fmt.Sprintf("%d-%d-%d-%s", w, d, o, i.Updated)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
