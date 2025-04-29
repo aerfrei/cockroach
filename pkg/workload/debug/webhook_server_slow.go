@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"strconv"
 	"time"
 
@@ -95,7 +96,17 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			} `json:"payload"`
 		}
 
-		err := json.NewDecoder(r.Body).Decode(&req)
+		byts, _ := httputil.DumpRequest(r, true)
+		log.Println(string(byts), "request bytes")
+
+		var obj map[string]interface{}
+		// if err := json.Unmarshal(raw, &obj); err != nil {
+		// 	log.Printf("decoding body: %v", err)
+		// }
+
+		err := json.NewDecoder(r.Body).Decode(&obj)
+
+		log.Printf("request body obj %s", obj)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
