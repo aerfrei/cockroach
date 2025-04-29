@@ -140,7 +140,7 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					seen[seenKey] = struct{}{}
 					after++
 
-					if oInt, ok := o.(int); ok && oInt%2500 == 0 {
+					if oInt, ok := o.(int); ok && oInt%2000 < 10 {
 						sleepDurationIndex := oInt / 2500
 						if sleepDurationIndex < len(rangeDelays) {
 							timeToSleep := rangeDelays[sleepDurationIndex]
