@@ -82,11 +82,9 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			Length  int `json:"length"`
 			Payload []struct {
 				After struct {
-					CRDBRegion string `json:"crdb_region"`
-					O          int    `json:"no_o_id"`
-					D          int    `json:"no_d_id"`
-					W          int    `json:"no_w_id"`
-					VAL        int    `json:"val"`
+					I   int `json:"s_i_id"`
+					W   int `json:"s_w_id"`
+					VAL int `json:"val"`
 				} `json:"after"`
 				Before struct {
 					ID  int `json:"id"`
@@ -131,43 +129,44 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					keyParts = append(keyParts, fmt.Sprintf("%v", part))
 				}
 				w := i.Key[1]
-				d := i.Key[2]
-				o := i.Key[3]
+				iany := i.Key[2]
+				fmt.Println("key", i.Key)
+				// o := i.Key[3]
 				// fmt.Println(strings.Join(keyParts, "-"), "key")
 				wf64, ok := w.(float64)
 				if !ok {
 					log.Printf("Error: w is not a float64, got type %T", w)
 					return
 				}
-				df64, ok := d.(float64)
+				if64, ok := iany.(float64)
 				if !ok {
-					log.Printf("Error: d is not a float64, got type %T", d)
+					log.Printf("Error: i is not a float64, got type %T", if64)
 					return
 				}
-				of64, ok := o.(float64)
-				if !ok {
-					log.Printf("Error: o is not a float64, got type %T", o)
-					return
-				}
-				seenKey := fmt.Sprintf("%d-%d-%d-%s", int(wf64), int(df64), int(of64), i.Updated)
+				// of64, ok := o.(float64)
+				// if !ok {
+				// 	log.Printf("Error: o is not a float64, got type %T", o)
+				// 	return
+				// }
+				seenKey := fmt.Sprintf("%d-%d-%s", int(wf64), int(if64), i.Updated)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
 					var timeToSleep time.Duration
-					if int(wf64)%50 == 0 {
-						if wf64 < 309 {
+					if int(wf64)%3 == 0 {
+						if wf64 < 9 {
 							timeToSleep = rangeDelays[0]
-						} else if wf64 < 570 {
+						} else if wf64 < 18 {
 							timeToSleep = rangeDelays[1]
-						} else if wf64 < 951 {
+						} else if wf64 < 27 {
 							timeToSleep = rangeDelays[2]
-						} else if wf64 < 1131 {
+						} else if wf64 < 36 {
 							timeToSleep = rangeDelays[3]
-						} else if wf64 < 2463 {
+						} else if wf64 < 42 {
 							timeToSleep = rangeDelays[4]
-						} else if int(wf64)%2000 < 10 {
-							sleepDurationIndex := 4 + int(wf64/2000)
+						} else if int(wf64)%10 < 2 {
+							sleepDurationIndex := 4 + int(wf64/10)
 							if sleepDurationIndex < len(rangeDelays) {
 								timeToSleep = rangeDelays[sleepDurationIndex]
 							}
