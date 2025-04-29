@@ -134,40 +134,47 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 				d := i.Key[2]
 				o := i.Key[3]
 				// fmt.Println(strings.Join(keyParts, "-"), "key")
-				wInt, ok := w.(float64)
+				wf64, ok := w.(float64)
 				if !ok {
 					log.Printf("Error: w is not a float64, got type %T", w)
 					return
 				}
-				dInt, ok := d.(float64)
+				df64, ok := d.(float64)
 				if !ok {
 					log.Printf("Error: d is not a float64, got type %T", d)
 					return
 				}
-				oInt, ok := o.(float64)
+				of64, ok := o.(float64)
 				if !ok {
 					log.Printf("Error: o is not a float64, got type %T", o)
 					return
 				}
-				seenKey := fmt.Sprintf("%d-%d-%d-%s", int(wInt), int(dInt), int(oInt), i.Updated)
+				seenKey := fmt.Sprintf("%d-%d-%d-%s", int(wf64), int(df64), int(of64), i.Updated)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
-					if int(wInt)%2000 < 10 {
-						fmt.Println("w is eligible", wInt)
-						sleepDurationIndex := int(wInt / 2000)
-						if sleepDurationIndex < len(rangeDelays) {
-							timeToSleep := rangeDelays[sleepDurationIndex]
-							fmt.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
-							time.Sleep(timeToSleep)
-						} else {
-							fmt.Println("wInt is too large for rangeDelays", wInt)
+					var timeToSleep time.Duration
+					if int(wf64)%50 == 0 {
+						if wf64 < 309 {
+							timeToSleep = rangeDelays[0]
+						} else if wf64 < 570 {
+							timeToSleep = rangeDelays[1]
+						} else if wf64 < 951 {
+							timeToSleep = rangeDelays[2]
+						} else if wf64 < 1131 {
+							timeToSleep = rangeDelays[3]
+						} else if wf64 < 2463 {
+							timeToSleep = rangeDelays[4]
+						} else if int(wf64)%2000 < 10 {
+							sleepDurationIndex := 4 + int(wf64/2000)
+							if sleepDurationIndex < len(rangeDelays) {
+								timeToSleep = rangeDelays[sleepDurationIndex]
+							}
 						}
-					}
 
-					if int(wInt) > 1500 {
-						fmt.Println("w is greater than 1500", wInt)
+						time.Sleep(timeToSleep)
+						fmt.Println("Sleeping for ", timeToSleep.Milliseconds(), "ms for seenkey", seenKey)
 					}
 				} else {
 					dupes++
