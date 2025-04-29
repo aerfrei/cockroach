@@ -93,8 +93,8 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 					ID  int `json:"id"`
 					VAL int `json:"val"`
 				} `json:"before"`
-				Key     []struct{} `json:"key"`
-				Updated string     `json:"updated"`
+				Key     []any  `json:"key"`
+				Updated string `json:"updated"`
 			} `json:"payload"`
 		}
 
