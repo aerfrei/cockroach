@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/cli/exit"
@@ -134,19 +133,26 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 				w := i.Key[1]
 				d := i.Key[2]
 				o := i.Key[3]
-				fmt.Println(strings.Join(keyParts, "-"), "key")
+				// fmt.Println(strings.Join(keyParts, "-"), "key")
 				seenKey := fmt.Sprintf("%d-%d-%d-%s", w, d, o, i.Updated)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
-					if wInt, ok := w.(int); ok && wInt%2000 < 10 {
-						sleepDurationIndex := wInt / 2500
-						if sleepDurationIndex < len(rangeDelays) {
-							timeToSleep := rangeDelays[sleepDurationIndex]
-							log.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
-							time.Sleep(timeToSleep)
+					if wInt, ok := w.(int); ok {
+						if wInt%2000 < 10 {
+							fmt.Println("w is eligible", wInt)
+							sleepDurationIndex := wInt / 2000
+							if sleepDurationIndex < len(rangeDelays) {
+								timeToSleep := rangeDelays[sleepDurationIndex]
+								fmt.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
+								time.Sleep(timeToSleep)
+							} else {
+								fmt.Println("wInt is too large for rangeDelays", wInt)
+							}
 						}
+					} else {
+						fmt.Println("w not an int", wInt)
 					}
 				} else {
 					dupes++
