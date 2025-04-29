@@ -82,7 +82,9 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			Length  int `json:"length"`
 			Payload []struct {
 				After struct {
-					ID  int `json:"id"`
+					O   int `json:"no_o_id"`
+					D   int `json:"no_d_id"`
+					W   int `json:"no_w_id"`
 					VAL int `json:"val"`
 				} `json:"after"`
 				Before struct {
@@ -100,14 +102,14 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 		}
 
 		now := time.Now()
-		if now.Sub(lastTransientErrorTime) >= time.Duration(transientErrorFrequency)*time.Millisecond {
+		if transientErrorFrequency > 0 && now.Sub(lastTransientErrorTime) >= time.Duration(transientErrorFrequency)*time.Millisecond {
 			lastTransientErrorTime = now
-			log.Printf("AMF: transient error")
+			log.Printf("Simulating transient sink error")
 			http.Error(w, "transient sink error", http.StatusInternalServerError)
 			return
 		}
 
-		var before, after, d int
+		var before, after, dupeCount int
 		func() {
 			mu.Lock()
 			defer mu.Unlock()
@@ -115,18 +117,21 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			after = before
 			// TODO(cdc): add check for ordering guarantees using resolved timestamps and event timestamps
 			for _, i := range req.Payload {
-				id := i.After.ID
-				seenKey := fmt.Sprintf("%d-%s", id, i.Updated)
+				o := i.After.O
+				d := i.After.D
+				w := i.After.W
+				seenKey := fmt.Sprintf("%d-%d-%d-%s", w, d, o, i.Updated)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
-					sleepDurationIndex := id / 10
-					if sleepDurationIndex < len(rangeDelays) {
-						timeToSleep := rangeDelays[sleepDurationIndex]
-						log.Printf("AF: Sleeping for %v ms", timeToSleep.Milliseconds())
-						time.Sleep(timeToSleep)
-						log.Printf("AF: Slept for %v ms", timeToSleep.Milliseconds())
+					if o%2500 == 0 {
+						sleepDurationIndex := o / 2500
+						if sleepDurationIndex < len(rangeDelays) {
+							timeToSleep := rangeDelays[sleepDurationIndex]
+							log.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
+							time.Sleep(timeToSleep)
+						}
 					}
 				} else {
 					dupes++
@@ -135,11 +140,11 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			if r.ContentLength > 0 {
 				size += r.ContentLength
 			}
-			d = dupes
+			dupeCount = dupes
 		}()
 		const printEvery = 100
 		if before/printEvery != after/printEvery {
-			log.Printf("keys seen: %d (%d dupes); %.1f MB", after, d, float64(size)/float64(1<<20))
+			log.Printf("keys seen: %d (%d dupes); %.1f MB", after, dupeCount, float64(size)/float64(1<<20))
 		}
 	})
 	mux.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
