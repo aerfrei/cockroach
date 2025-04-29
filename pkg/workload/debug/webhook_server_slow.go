@@ -127,21 +127,21 @@ func webhookServerSlow(cmd *cobra.Command, args []string) error {
 			after = before
 			// TODO(cdc): add check for ordering guarantees using resolved timestamps and event timestamps
 			for _, i := range req.Payload {
-				o := i.After.O
-				d := i.After.D
-				w := i.After.W
 				var keyParts []string
 				for _, part := range i.Key {
 					keyParts = append(keyParts, fmt.Sprintf("%v", part))
 				}
-				fmt.Printf(strings.Join(keyParts, "-"), "key")
+				o := i.Key[3]
+				d := i.Key[2]
+				w := i.Key[1]
+				fmt.Println(strings.Join(keyParts, "-"), "key")
 				seenKey := fmt.Sprintf("%d-%d-%d-%s", w, d, o, i.Updated)
 				if _, ok := seen[seenKey]; !ok {
 					seen[seenKey] = struct{}{}
 					after++
 
-					if o%2500 == 0 {
-						sleepDurationIndex := o / 2500
+					if oInt, ok := o.(int); ok && oInt%2500 == 0 {
+						sleepDurationIndex := oInt / 2500
 						if sleepDurationIndex < len(rangeDelays) {
 							timeToSleep := rangeDelays[sleepDurationIndex]
 							log.Printf("Sleeping for %v ms for seenkey %s", timeToSleep.Milliseconds(), seenKey)
