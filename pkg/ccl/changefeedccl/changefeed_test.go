@@ -9770,5 +9770,5 @@ func TestCDCQuerySelectSingleRow(t *testing.T) {
 		}
 		fmt.Println("done after select")
 	}
-	cdcTest(t, testFn, withKnobsFn(knobsFn))
+	cdcTest(t, testFn, withKnobsFn(knobsFn), feedTestForceSink("webhook"))
 }

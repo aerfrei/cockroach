@@ -447,12 +447,16 @@ func (f *jobFeed) WaitForStatus(statusPred func(status jobs.Status) bool) error 
 	}
 	// Wait for the job status predicate to become true.
 	return testutils.SucceedsSoonError(func() error {
+		fmt.Println("trying loop again")
 		var status string
 		var err error
 		if status, err = f.status(); err != nil {
+			fmt.Println("error getting status")
 			return err
 		}
+		fmt.Println("got status", status)
 		if statusPred(jobs.Status(status)) {
+			fmt.Println("status predicate satisfied", status)
 			return nil
 		}
 		return errors.Newf("still waiting for job status; current %s", status)
@@ -565,10 +569,12 @@ func (f *jobFeed) FetchRunningStatus() (runningStatusStr string, err error) {
 // Close closes job feed.
 func (f *jobFeed) Close() error {
 	// Signal shutdown.
+	fmt.Println("closing job feed)")
 	select {
 	case <-f.shutdown:
 	// Already failed/or failing.
 	default:
+		fmt.Println("in this default case")
 		// TODO(yevgeniy): Cancel job w/out producing spurious error messages in the logs.
 		if f.jobID == jobspb.InvalidJobID {
 			// Some tests may create a jobFeed without creating a new job. Hence, if
@@ -580,6 +586,7 @@ func (f *jobFeed) Close() error {
 			return err
 		}
 		if status == string(jobs.StatusSucceeded) {
+			fmt.Println("status succeeded")
 			f.mu.Lock()
 			defer f.mu.Unlock()
 			f.mu.terminalErr = errors.New("changefeed completed")
@@ -587,6 +594,7 @@ func (f *jobFeed) Close() error {
 			return nil
 		}
 		if status == string(jobs.StatusFailed) {
+			fmt.Println("status failed")
 			f.mu.Lock()
 			defer f.mu.Unlock()
 			f.mu.terminalErr = errors.New("changefeed failed")
@@ -596,9 +604,11 @@ func (f *jobFeed) Close() error {
 		if _, err := f.db.Exec(`CANCEL JOB $1`, f.jobID); err != nil {
 			log.Infof(context.Background(), `could not cancel feed %d: %v`, f.jobID, err)
 		} else {
+			fmt.Println("waiting for status canceled")
 			return f.WaitForStatus(func(s jobs.Status) bool { return s == jobs.StatusCanceled })
 		}
 	}
+	fmt.Println("done closing job feed")
 
 	return nil
 }
@@ -2350,10 +2360,12 @@ func (f *webhookFeed) Next() (*cdctest.TestFeedMessage, error) {
 func (f *webhookFeed) Close() error {
 	fmt.Println("closing webhook feed")
 	err := f.jobFeed.Close()
+	fmt.Println("closed job feed")
 	if err != nil {
 		fmt.Println("error closing job feed:", err)
 		return err
 	}
+	fmt.Println("going to close mock sink")
 	f.mockSink.Close()
 	fmt.Println("done closing webhook feed")
 	return nil
