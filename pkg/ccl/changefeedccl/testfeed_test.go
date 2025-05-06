@@ -2066,7 +2066,12 @@ func (k *kafkaFeed) Next() (*cdctest.TestFeedMessage, error) {
 // Close implements TestFeed interface.
 func (k *kafkaFeed) Close() error {
 	if k.registry != nil {
-		defer k.registry.Close()
+		fmt.Printf("Closing registry %s\n", k.registry.URL())
+		defer func() {
+			fmt.Println("closing reg...")
+			defer k.registry.Close()
+			fmt.Println("closed reg successfully")
+		}()
 	}
 	return errors.CombineErrors(k.jobFeed.Close(), k.tg.wait())
 }
@@ -2343,11 +2348,14 @@ func (f *webhookFeed) Next() (*cdctest.TestFeedMessage, error) {
 
 // Close implements TestFeed
 func (f *webhookFeed) Close() error {
+	fmt.Println("closing webhook feed")
 	err := f.jobFeed.Close()
 	if err != nil {
+		fmt.Println("error closing job feed:", err)
 		return err
 	}
 	f.mockSink.Close()
+	fmt.Println("done closing webhook feed")
 	return nil
 }
 

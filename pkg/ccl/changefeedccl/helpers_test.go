@@ -199,6 +199,7 @@ func assertPayloadsBase(
 	require.NoError(t,
 		withTimeout(f, timeout,
 			func(ctx context.Context) (err error) {
+				fmt.Println("retry this here")
 				return assertPayloadsBaseErr(ctx, f, expected, stripTs, perKeyOrdered)
 			},
 		))
@@ -208,6 +209,7 @@ func assertPayloadsBaseErr(
 	ctx context.Context, f cdctest.TestFeed, expected []string, stripTs bool, perKeyOrdered bool,
 ) error {
 	actual, err := readNextMessages(ctx, f, len(expected))
+	fmt.Println("read next message and got", actual)
 	if err != nil {
 		return err
 	}
@@ -239,10 +241,17 @@ func assertPayloadsBaseErr(
 
 	sort.Strings(expected)
 	sort.Strings(actualFormatted)
+
+	fmt.Println("after sorting got", expected, actualFormatted)
+
 	if !reflect.DeepEqual(expected, actualFormatted) {
+		fmt.Println("assertPayloadsBase: expected", expected, "got", actualFormatted)
 		return errors.Newf("expected\n  %s\ngot\n  %s",
 			strings.Join(expected, "\n  "), strings.Join(actualFormatted, "\n  "))
 	}
+
+	fmt.Println("assertPayloadsBase: success")
+
 	return nil
 }
 
@@ -270,6 +279,7 @@ func withTimeout(
 }
 
 func assertPayloads(t testing.TB, f cdctest.TestFeed, expected []string) {
+	fmt.Printf("asserting payloads: %s\n", strings.Join(expected, "\n"))
 	t.Helper()
 	assertPayloadsBase(t, f, expected, false, false)
 }
@@ -767,9 +777,12 @@ func expectErrCreatingFeed(
 }
 
 func closeFeed(t testing.TB, f cdctest.TestFeed) {
+	fmt.Println("AF: Closing feed...")
 	if err := f.Close(); err != nil {
+		fmt.Println("AF: Error closing feed")
 		t.Fatal(err)
 	}
+	fmt.Println("AF: Feed closed successfully")
 }
 
 func closeFeedIgnoreError(t testing.TB, f cdctest.TestFeed) {
@@ -1059,7 +1072,12 @@ func getInitialDBForEnterpriseFactory(
 		if err != nil {
 			t.Fatal(err)
 		}
-		return userDB, func() { _ = userDB.Close() }
+		fmt.Println("returning this cleanup function")
+		return userDB, func() {
+			fmt.Println("AF: closing userDB")
+			_ = userDB.Close()
+			fmt.Println("AF: closing userDB completed")
+		}
 	}
 	return rootDB, func() {}
 }
@@ -1150,12 +1168,26 @@ func cdcTestNamedWithSystem(
 		testServer, cleanupServer := makeServerWithOptions(t, options)
 		feedFactory, cleanupSink := makeFeedFactoryWithOptions(t, sinkType, testServer.Server, testServer.DB, options)
 		feedFactory = maybeUseExternalConnection(feedFactory, testServer.DB, sinkType, options, t)
-		defer cleanupServer()
-		defer cleanupSink()
-		defer cleanupCloudStorage()
+		defer func() {
+			fmt.Println("AF: cleanupServer starting")
+			cleanupServer()
+			fmt.Println("AF: cleanupServer completed")
+		}()
+		defer func() {
+			fmt.Println("AF: cleanupSink starting")
+			cleanupSink()
+			fmt.Println("AF: cleanupSink completed")
+		}()
+		defer func() {
+			fmt.Println("AF: cleanupCloudStorage starting")
+			cleanupCloudStorage()
+			fmt.Println("AF: cleanupCloudStorage completed")
+		}()
 
 		testFn(t, testServer, feedFactory)
+		fmt.Println("test completed in t.Run in cdcTestNamedWithSystem")
 	})
+	fmt.Println("test completed in cdcTestNamedWithSystem")
 }
 
 // TODO (zinger): These sometimes error when using external connections,

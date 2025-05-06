@@ -7,6 +7,7 @@ package changefeedccl
 
 import (
 	"context"
+	"fmt"
 	"hash"
 	"hash/crc32"
 	"runtime"
@@ -333,6 +334,7 @@ func (c *kvEventToRowConsumer) ConsumeEvent(ctx context.Context, ev kvevent.Even
 	}
 
 	updatedRow, err := c.decoder.DecodeKV(ctx, ev.KV(), cdcevent.CurrentRow, schemaTimestamp, keyOnly)
+	fmt.Println("updatedRow", updatedRow)
 	if err != nil {
 		// Column families are stored contiguously, so we'll get
 		// events for each one even if we're not watching them all.

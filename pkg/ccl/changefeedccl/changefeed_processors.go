@@ -808,6 +808,7 @@ func (ca *changeAggregator) tick() error {
 			ca.sliMetrics.AdmitLatency.RecordValue(timeutil.Since(event.Timestamp().GoTime()).Nanoseconds())
 		}
 		ca.recentKVCount++
+		fmt.Println("event", event)
 		return ca.eventConsumer.ConsumeEvent(ca.Ctx(), event)
 	case kvevent.TypeResolved:
 		a := event.DetachAlloc()

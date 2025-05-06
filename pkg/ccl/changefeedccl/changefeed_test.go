@@ -939,7 +939,7 @@ func TestChangefeedCursor(t *testing.T) {
 		}
 	}
 
-	cdcTest(t, testFn)
+	cdcTest(t, testFn, feedTestForceSink("kafka"))
 }
 
 func TestChangefeedTimestamps(t *testing.T) {
@@ -9746,10 +9746,14 @@ func TestCDCQuerySelectSingleRow(t *testing.T) {
 		go func() {
 			defer close(done)
 			assertPayloads(t, foo, []string{`foo: [1]->{"key": 1}`})
+			fmt.Println("assertion complete")
 		}()
+
+		fmt.Println("after iif")
 
 		select {
 		case err := <-errCh:
+			fmt.Println("got error")
 			// Ignore any error after the above assertion completed, because
 			// it's likely just due to feed shutdown.
 			select {
@@ -9758,10 +9762,13 @@ func TestCDCQuerySelectSingleRow(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		case <-time.After(30 * time.Second):
+			fmt.Println("timed out waiting for error")
 			t.Fatal("timed out")
 		case <-done:
+			fmt.Println("done")
 			return
 		}
+		fmt.Println("done after select")
 	}
 	cdcTest(t, testFn, withKnobsFn(knobsFn))
 }
