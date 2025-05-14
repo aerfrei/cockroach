@@ -4379,9 +4379,6 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	// Start a Kafka consumer to log message counts for each orders table topic.
 	for _, table := range orderTables {
 		topic := table
-		if idx := strings.Index(topic, "."); idx != -1 {
-			topic = topic[idx+1:]
-		}
 		consumer, err := kafka.newConsumer(ctx, topic, nil)
 		if err != nil {
 			t.L().Printf("Failed to start consumer for topic %s: %v", topic, err)
