@@ -4307,9 +4307,14 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		return c.RunE(ctx, option.WithNodes(c.WorkloadNode()), workloadCmd)
 	})
 
+	// Enable rangefeeds (required for changefeeds)
+	db := c.Conn(ctx, t.L(), 1)
+	if _, err := db.Exec("SET CLUSTER SETTING kv.rangefeed.enabled = true"); err != nil {
+		t.Fatalf("failed to enable rangefeeds: %v", err)
+	}
+
 	// Start a changefeed for both orders tables
 	ordersTables := []string{"tpccdb1.orders", "tpccdb2.orders"}
-	db := c.Conn(ctx, t.L(), 1)
 	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
 	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", strings.Join(ordersTables, ", "), kafka.sinkURL(ctx))
@@ -4320,4 +4325,47 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 
 	t.Status("Minimal multi-db TPCC + changefeed test running")
 	m.Wait()
+
+	// Start a Kafka consumer to log message counts for each orders table topic.
+	for _, table := range ordersTables {
+		topic := table
+		if idx := strings.Index(topic, "."); idx != -1 {
+			topic = topic[idx+1:]
+		}
+		consumer, err := kafka.newConsumer(ctx, topic, nil)
+		if err != nil {
+			t.L().Printf("Failed to start consumer for topic %s: %v", topic, err)
+			continue
+		}
+		m.Go(func(ctx context.Context) error {
+			defer consumer.close()
+			count := 0
+			ticker := time.NewTicker(time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-ticker.C:
+					t.L().Printf("Received %d changefeed messages on topic %s so far", count, topic)
+				case _, ok := <-func() chan *sarama.ConsumerMessage {
+					ch := make(chan *sarama.ConsumerMessage, 1)
+					go func() {
+						m, err := consumer.next(ctx)
+						if err == nil && m != nil {
+							ch <- m
+						} else {
+							close(ch)
+						}
+					}()
+					return ch
+				}():
+					if !ok {
+						return nil
+					}
+					count++
+				}
+			}
+		})
+	}
 }
