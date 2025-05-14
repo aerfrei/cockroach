@@ -4321,10 +4321,52 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	// Start a changefeed for both orders tables in the schemas
 	ordersTables := []string{}
 	for _, schema := range schemaNames {
-		ordersTables = append(ordersTables, fmt.Sprintf("%s.%s.orders", dbName, schema))
+		ordersTables = append(ordersTables, fmt.Sprintf("%s.orders", schema))
 	}
 	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
+
+	// Log all tables in the database
+	rows, err := db.Query("SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = $1", dbName)
+	if err != nil {
+		t.L().Printf("Error querying information_schema.tables: %v", err)
+	} else {
+		t.L().Printf("Tables in database %s:", dbName)
+		for rows.Next() {
+			var schema, table string
+			_ = rows.Scan(&schema, &table)
+			t.L().Printf("  %s.%s", schema, table)
+		}
+		rows.Close()
+	}
+
+	// Log all tables in each target schema
+	for _, schema := range schemaNames {
+		rows, err := db.Query("SELECT table_name FROM information_schema.tables WHERE table_catalog = $1 AND table_schema = $2", dbName, schema)
+		if err != nil {
+			t.L().Printf("Error querying tables in schema %s: %v", schema, err)
+			continue
+		}
+		t.L().Printf("Tables in %s.%s:", dbName, schema)
+		for rows.Next() {
+			var table string
+			_ = rows.Scan(&table)
+			t.L().Printf("  %s", table)
+		}
+		rows.Close()
+	}
+
+	// Log the search path and current database
+	row := db.QueryRow("SHOW search_path")
+	var searchPath string
+	_ = row.Scan(&searchPath)
+	t.L().Printf("Current search_path: %s", searchPath)
+
+	row = db.QueryRow("SELECT current_database()")
+	var currentDB string
+	_ = row.Scan(&currentDB)
+	t.L().Printf("Current database: %s", currentDB)
+
 	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", strings.Join(ordersTables, ", "), kafka.sinkURL(ctx))
 	var jobID int
 	if err := db.QueryRow(changefeedStmt).Scan(&jobID); err != nil {
