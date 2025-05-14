@@ -4277,44 +4277,52 @@ func verifyMetricsNonZero(names ...string) func(metrics map[string]*prompb.Metri
 func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluster) {
 	c.Start(ctx, t.L(), option.DefaultStartOpts(), install.MakeClusterSettings(), c.All())
 
-	dbNames := []string{"tpccdb1", "tpccdb2"}
-	for _, db := range dbNames {
-		_, err := c.Conn(ctx, t.L(), 1).Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", db))
-		if err != nil {
-			t.Fatalf("failed to create db %s: %v", db, err)
+	dbName := "tpccdb"
+	schemaNames := []string{"schema1", "schema2"}
+	db := c.Conn(ctx, t.L(), 1)
+	if _, err := db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName)); err != nil {
+		t.Fatalf("failed to create db %s: %v", dbName, err)
+	}
+	for _, schema := range schemaNames {
+		if _, err := db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s.%s", dbName, schema)); err != nil {
+			t.Fatalf("failed to create schema %s: %v", schema, err)
 		}
 	}
 
-	// Write db list file for tpccmultidb
+	// Write db list file for tpccmultidb (entries like tpccdb.schema1)
 	dbListFile := "/tmp/tpcc_db_list.txt"
-	dbList := strings.Join(dbNames, "\n")
-	err := c.PutString(ctx, dbList, dbListFile, 0644, c.WorkloadNode())
+	dbList := []string{}
+	for _, schema := range schemaNames {
+		dbList = append(dbList, fmt.Sprintf("%s.%s", dbName, schema))
+	}
+	err := c.PutString(ctx, strings.Join(dbList, "\n"), dbListFile, 0644, c.WorkloadNode())
 	if err != nil {
 		t.Fatalf("failed to write db list file: %v", err)
 	}
 
-	// Run tpccmultidb init for both DBs
+	// Run tpccmultidb init for both schemas
 	initCmd := fmt.Sprintf("./cockroach workload init tpccmultidb --warehouses=1 --db-list-file=%s {pgurl:1}", dbListFile)
 	if err := c.RunE(ctx, option.WithNodes(c.WorkloadNode()), initCmd); err != nil {
 		t.Fatalf("failed to init tpccmultidb: %v", err)
 	}
 
-	// Start tpccmultidb workload (run in background)
-	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=5m --db-list-file=%s {pgurl:1}", dbListFile)
 	// Start tpccmultidb workload using the cluster monitor
+	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=5m --db-list-file=%s {pgurl:1}", dbListFile)
 	m := c.NewMonitor(ctx, c.All())
 	m.Go(func(ctx context.Context) error {
 		return c.RunE(ctx, option.WithNodes(c.WorkloadNode()), workloadCmd)
 	})
 
 	// Enable rangefeeds (required for changefeeds)
-	db := c.Conn(ctx, t.L(), 1)
 	if _, err := db.Exec("SET CLUSTER SETTING kv.rangefeed.enabled = true"); err != nil {
 		t.Fatalf("failed to enable rangefeeds: %v", err)
 	}
 
-	// Start a changefeed for both orders tables
-	ordersTables := []string{"tpccdb1.public.orders", "tpccdb2.public.orders"}
+	// Start a changefeed for both orders tables in the schemas
+	ordersTables := []string{}
+	for _, schema := range schemaNames {
+		ordersTables = append(ordersTables, fmt.Sprintf("%s.%s.orders", dbName, schema))
+	}
 	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
 	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", strings.Join(ordersTables, ", "), kafka.sinkURL(ctx))
@@ -4323,7 +4331,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		t.Fatalf("failed to create changefeed: %v", err)
 	}
 
-	t.Status("Minimal multi-db TPCC + changefeed test running")
+	t.Status("Minimal multi-schema TPCC + changefeed test running")
 	m.Wait()
 
 	// Start a Kafka consumer to log message counts for each orders table topic.
