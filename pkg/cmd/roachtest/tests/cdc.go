@@ -4277,7 +4277,7 @@ func verifyMetricsNonZero(names ...string) func(metrics map[string]*prompb.Metri
 func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluster) {
 	c.Start(ctx, t.L(), option.DefaultStartOpts(), install.MakeClusterSettings(), c.All())
 
-	dbName := "tpccdb"
+	dbName := "defaultdb"
 	schemaNames := []string{"schema1", "schema2"}
 	db := c.Conn(ctx, t.L(), 1)
 	if _, err := db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName)); err != nil {
