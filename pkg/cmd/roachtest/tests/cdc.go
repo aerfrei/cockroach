@@ -4319,9 +4319,9 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	}
 
 	// Start a changefeed for both orders tables in the schemas
-	ordersTables := []string{}
+	orderTables := []string{}
 	for _, schema := range schemaNames {
-		ordersTables = append(ordersTables, fmt.Sprintf("%s.orders", schema))
+		orderTables = append(orderTables, fmt.Sprintf("%s.order", schema))
 	}
 	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
@@ -4367,7 +4367,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	_ = row.Scan(&currentDB)
 	t.L().Printf("Current database: %s", currentDB)
 
-	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", strings.Join(ordersTables, ", "), kafka.sinkURL(ctx))
+	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", strings.Join(orderTables, ", "), kafka.sinkURL(ctx))
 	var jobID int
 	if err := db.QueryRow(changefeedStmt).Scan(&jobID); err != nil {
 		t.Fatalf("failed to create changefeed: %v", err)
@@ -4377,7 +4377,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	m.Wait()
 
 	// Start a Kafka consumer to log message counts for each orders table topic.
-	for _, table := range ordersTables {
+	for _, table := range orderTables {
 		topic := table
 		if idx := strings.Index(topic, "."); idx != -1 {
 			topic = topic[idx+1:]
