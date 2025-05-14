@@ -4314,7 +4314,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	}
 
 	// Start a changefeed for both orders tables
-	ordersTables := []string{"tpccdb1.orders", "tpccdb2.orders"}
+	ordersTables := []string{"tpccdb1.public.orders", "tpccdb2.public.orders"}
 	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
 	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", strings.Join(ordersTables, ", "), kafka.sinkURL(ctx))
