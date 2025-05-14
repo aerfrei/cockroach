@@ -36,6 +36,7 @@ func registerLargeSchemaBenchmarks(r registry.Registry) {
 	}
 }
 
+// AF:
 func registerLargeSchemaBenchmark(r registry.Registry, numTables int, isMultiRegion bool) {
 	clusterSpec := []spec.Option{
 		spec.CPU(8),

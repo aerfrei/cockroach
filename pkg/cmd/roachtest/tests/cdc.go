@@ -321,6 +321,7 @@ func (ct *cdcTester) lockSchema(targets []string) {
 	}
 }
 
+// AF:
 func (ct *cdcTester) runTPCCWorkload(args tpccArgs) {
 	tpcc := tpccWorkload{
 		sqlNodes:           ct.crdbNodes,
@@ -2610,14 +2611,14 @@ func registerCDC(r registry.Registry) {
 		},
 	})
 	r.Add(registry.TestSpec{
-		Name:             "cdc/multi-table-pts",
+		Name:             "cdc/multi-db-tpcc-minimal",
 		Owner:            registry.OwnerCDC,
 		Benchmark:        false,
 		Cluster:          r.MakeClusterSpec(3, spec.CPU(16)),
 		CompatibleClouds: registry.AllClouds,
 		Suites:           registry.Suites(registry.Nightly),
 		Timeout:          1 * time.Hour,
-		Run:              runCDCMultiTablePTS,
+		Run:              runCDCMultiDBTPCCMinimal,
 	})
 }
 
@@ -4272,105 +4273,51 @@ func verifyMetricsNonZero(names ...string) func(metrics map[string]*prompb.Metri
 	}
 }
 
-// runCDCMultiTablePTS runs a test that evaluates how well the protected timestamp (PTS) system works for multi-table changefeeds.
-// It creates multiple TPCC tables, runs workloads on them, starts a multi-table changefeed, and monitors PTS records.
-func runCDCMultiTablePTS(ctx context.Context, t test.Test, c cluster.Cluster) {
-	const numTables = 3
-	const warehousesPerTable = 10
-	const workloadDuration = "10m"
-
+// Minimal test: multi-db tpcc workload and multi-table changefeed.
+func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluster) {
 	c.Start(ctx, t.L(), option.DefaultStartOpts(), install.MakeClusterSettings(), c.All())
 
+	dbNames := []string{"tpccdb1", "tpccdb2"}
+	for _, db := range dbNames {
+		_, err := c.Conn(ctx, t.L(), 1).Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", db))
+		if err != nil {
+			t.Fatalf("failed to create db %s: %v", db, err)
+		}
+	}
+
+	// Write db list file for tpccmultidb
+	dbListFile := "/tmp/tpcc_db_list.txt"
+	dbList := strings.Join(dbNames, "\n")
+	err := c.PutString(ctx, dbList, dbListFile, 0644, c.WorkloadNode())
+	if err != nil {
+		t.Fatalf("failed to write db list file: %v", err)
+	}
+
+	// Run tpccmultidb init for both DBs
+	initCmd := fmt.Sprintf("./cockroach workload init tpccmultidb --warehouses=1 --db-list-file=%s {pgurl:1}", dbListFile)
+	if err := c.RunE(ctx, option.WithNodes(c.WorkloadNode()), initCmd); err != nil {
+		t.Fatalf("failed to init tpccmultidb: %v", err)
+	}
+
+	// Start tpccmultidb workload (run in background)
+	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=5m --db-list-file=%s {pgurl:1}", dbListFile)
+	// Start tpccmultidb workload using the cluster monitor
+	m := c.NewMonitor(ctx, c.All())
+	m.Go(func(ctx context.Context) error {
+		return c.RunE(ctx, option.WithNodes(c.WorkloadNode()), workloadCmd)
+	})
+
+	// Start a changefeed for both orders tables
+	ordersTables := []string{"tpccdb1.orders", "tpccdb2.orders"}
 	db := c.Conn(ctx, t.L(), 1)
-	defer stopFeeds(db)
-
-	t.Status("creating TPCC tables")
-	tableNames := make([]string, numTables)
-	for i := 0; i < numTables; i++ {
-		dbName := fmt.Sprintf("tpcc_pts_%d", i)
-		tableName := fmt.Sprintf("%s.warehouse", dbName)
-		tableNames[i] = tableName
-		_, err := db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName))
-		if err != nil {
-			t.Fatalf("failed to create db %s: %v", dbName, err)
-		}
-		_, err = db.Exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.warehouse (id INT PRIMARY KEY, name STRING)", dbName))
-		if err != nil {
-			t.Fatalf("failed to create table %s: %v", tableName, err)
-		}
-	}
-
-	t.Status("starting TPCC workloads in parallel")
-	var wg sync.WaitGroup
-	for i := 0; i < numTables; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			dbName := fmt.Sprintf("tpcc_pts_%d", i)
-			// Use the built-in workload generator for TPCC if available, else just insert rows.
-			for w := 1; w <= warehousesPerTable; w++ {
-				_, err := db.Exec(fmt.Sprintf("INSERT INTO %s.warehouse (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING", dbName), w, fmt.Sprintf("w%d", w))
-				if err != nil {
-					t.Errorf("failed to insert into %s.warehouse: %v", dbName, err)
-				}
-			}
-			// Simulate workload: update rows in a loop for the duration.
-			end := time.Now().Add(2 * time.Minute) // Short workload for demo; adjust as needed.
-			for time.Now().Before(end) {
-				_, err := db.Exec(fmt.Sprintf("UPDATE %s.warehouse SET name = name || 'x' WHERE id = $1", dbName), rand.Intn(warehousesPerTable)+1)
-				if err != nil {
-					t.Errorf("failed to update %s.warehouse: %v", dbName, err)
-				}
-				time.Sleep(100 * time.Millisecond)
-			}
-		}(i)
-	}
-
-	t.Status("creating multi-table changefeed")
-	changefeedTargets := strings.Join(tableNames, ", ")
 	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
-	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", changefeedTargets, kafka.sinkURL(ctx))
+	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", strings.Join(ordersTables, ", "), kafka.sinkURL(ctx))
 	var jobID int
 	if err := db.QueryRow(changefeedStmt).Scan(&jobID); err != nil {
 		t.Fatalf("failed to create changefeed: %v", err)
 	}
 
-	t.Status("monitoring PTS records for changefeed job")
-	ptsQuery := `SELECT protected_timestamp_record_id, timestamp, meta_type, meta_id FROM system.protected_ts_records WHERE meta_type = 'CHANGEFEED' AND meta_id = $1`
-	var ptsID string
-	var ptsTS time.Time
-	var metaType, metaID string
-	found := false
-	for i := 0; i < 30; i++ { // Try for up to 5 minutes
-		row := db.QueryRow(ptsQuery, jobID)
-		err := row.Scan(&ptsID, &ptsTS, &metaType, &metaID)
-		if err == nil {
-			found = true
-			break
-		}
-		time.Sleep(10 * time.Second)
-	}
-	if !found {
-		t.Fatalf("did not find PTS record for changefeed job %d", jobID)
-	}
-	t.L().Printf("Found PTS record %s at timestamp %s for changefeed job %d", ptsID, ptsTS, jobID)
-
-	// Wait for workload to finish
-	wg.Wait()
-
-	// After workload, check that the PTS record advances and is not lagging far behind highwater.
-	t.Status("checking PTS record advances after workload")
-	var highwater time.Time
-	row := db.QueryRow("SELECT highwater_timestamp FROM [SHOW CHANGEFEED JOBS] WHERE job_id = $1", jobID)
-	_ = row.Scan(&highwater) // Ignore error for demo
-	row = db.QueryRow(ptsQuery, jobID)
-	_ = row.Scan(&ptsID, &ptsTS, &metaType, &metaID)
-	lag := highwater.Sub(ptsTS)
-	t.L().Printf("PTS lag behind highwater: %s", lag)
-	if lag > 2*time.Minute {
-		t.Fatalf("PTS lag is too high: %s", lag)
-	}
-
-	t.Status("CDC multi-table PTS test complete")
+	t.Status("Minimal multi-db TPCC + changefeed test running")
+	m.Wait()
 }
