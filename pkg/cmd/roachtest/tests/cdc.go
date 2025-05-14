@@ -4289,7 +4289,6 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		}
 	}
 
-	// Write db list file for tpccmultidb (entries like tpccdb.schema1)
 	dbListFile := "/tmp/tpcc_db_list.txt"
 	dbList := []string{}
 	for _, schema := range schemaNames {
@@ -4300,72 +4299,27 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		t.Fatalf("failed to write db list file: %v", err)
 	}
 
-	// Run tpccmultidb init for both schemas
 	initCmd := fmt.Sprintf("./cockroach workload init tpccmultidb --warehouses=1 --db-list-file=%s {pgurl:1}", dbListFile)
 	if err := c.RunE(ctx, option.WithNodes(c.WorkloadNode()), initCmd); err != nil {
 		t.Fatalf("failed to init tpccmultidb: %v", err)
 	}
 
-	// Start tpccmultidb workload using the cluster monitor
 	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=5m --db-list-file=%s {pgurl:1}", dbListFile)
 	m := c.NewMonitor(ctx, c.All())
 	m.Go(func(ctx context.Context) error {
 		return c.RunE(ctx, option.WithNodes(c.WorkloadNode()), workloadCmd)
 	})
 
-	// Enable rangefeeds (required for changefeeds)
 	if _, err := db.Exec("SET CLUSTER SETTING kv.rangefeed.enabled = true"); err != nil {
 		t.Fatalf("failed to enable rangefeeds: %v", err)
 	}
 
-	// Start a changefeed for both orders tables in the schemas
 	orderTables := []string{}
 	for _, schema := range schemaNames {
 		orderTables = append(orderTables, fmt.Sprintf("%s.order", schema))
 	}
 	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
-
-	// Log all tables in the database
-	rows, err := db.Query("SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = $1", dbName)
-	if err != nil {
-		t.L().Printf("Error querying information_schema.tables: %v", err)
-	} else {
-		t.L().Printf("Tables in database %s:", dbName)
-		for rows.Next() {
-			var schema, table string
-			_ = rows.Scan(&schema, &table)
-			t.L().Printf("  %s.%s", schema, table)
-		}
-		rows.Close()
-	}
-
-	// Log all tables in each target schema
-	for _, schema := range schemaNames {
-		rows, err := db.Query("SELECT table_name FROM information_schema.tables WHERE table_catalog = $1 AND table_schema = $2", dbName, schema)
-		if err != nil {
-			t.L().Printf("Error querying tables in schema %s: %v", schema, err)
-			continue
-		}
-		t.L().Printf("Tables in %s.%s:", dbName, schema)
-		for rows.Next() {
-			var table string
-			_ = rows.Scan(&table)
-			t.L().Printf("  %s", table)
-		}
-		rows.Close()
-	}
-
-	// Log the search path and current database
-	row := db.QueryRow("SHOW search_path")
-	var searchPath string
-	_ = row.Scan(&searchPath)
-	t.L().Printf("Current search_path: %s", searchPath)
-
-	row = db.QueryRow("SELECT current_database()")
-	var currentDB string
-	_ = row.Scan(&currentDB)
-	t.L().Printf("Current database: %s", currentDB)
 
 	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s', full_table_name", strings.Join(orderTables, ", "), kafka.sinkURL(ctx))
 	var jobID int
@@ -4375,44 +4329,4 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 
 	t.Status("Minimal multi-schema TPCC + changefeed test running")
 	m.Wait()
-
-	// Start a Kafka consumer to log message counts for each orders table topic.
-	for _, table := range orderTables {
-		topic := table
-		consumer, err := kafka.newConsumer(ctx, topic, nil)
-		if err != nil {
-			t.L().Printf("Failed to start consumer for topic %s: %v", topic, err)
-			continue
-		}
-		m.Go(func(ctx context.Context) error {
-			defer consumer.close()
-			count := 0
-			ticker := time.NewTicker(time.Minute)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-ticker.C:
-					t.L().Printf("Received %d changefeed messages on topic %s so far", count, topic)
-				case _, ok := <-func() chan *sarama.ConsumerMessage {
-					ch := make(chan *sarama.ConsumerMessage, 1)
-					go func() {
-						m, err := consumer.next(ctx)
-						if err == nil && m != nil {
-							ch <- m
-						} else {
-							close(ch)
-						}
-					}()
-					return ch
-				}():
-					if !ok {
-						return nil
-					}
-					count++
-				}
-			}
-		})
-	}
 }
