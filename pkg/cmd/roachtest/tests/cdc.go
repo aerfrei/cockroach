@@ -2614,7 +2614,7 @@ func registerCDC(r registry.Registry) {
 		Name:             "cdc/multi-db-tpcc-minimal",
 		Owner:            registry.OwnerCDC,
 		Benchmark:        false,
-		Cluster:          r.MakeClusterSpec(3, spec.CPU(16)),
+		Cluster:          r.MakeClusterSpec(3, spec.CPU(16), spec.WorkloadNode()),
 		CompatibleClouds: registry.AllClouds,
 		Suites:           registry.Suites(registry.Nightly),
 		Timeout:          1 * time.Hour,
