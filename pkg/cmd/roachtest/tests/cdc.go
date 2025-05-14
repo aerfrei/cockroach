@@ -4367,7 +4367,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	_ = row.Scan(&currentDB)
 	t.L().Printf("Current database: %s", currentDB)
 
-	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s'", strings.Join(orderTables, ", "), kafka.sinkURL(ctx))
+	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s', full_table_name", strings.Join(orderTables, ", "), kafka.sinkURL(ctx))
 	var jobID int
 	if err := db.QueryRow(changefeedStmt).Scan(&jobID); err != nil {
 		t.Fatalf("failed to create changefeed: %v", err)
