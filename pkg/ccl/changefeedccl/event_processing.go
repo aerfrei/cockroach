@@ -422,6 +422,8 @@ func (c *kvEventToRowConsumer) encodeAndEmit(
 		return nil
 	}
 
+	log.Infof(ctx, "updated row %s: %s", updatedRow.TableName, updatedRow.DebugString())
+
 	evCtx := eventContext{
 		updated: schemaTS,
 		mvcc:    updatedRow.MvccTimestamp,

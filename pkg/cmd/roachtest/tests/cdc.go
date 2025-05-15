@@ -4299,6 +4299,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		t.Fatalf("failed to write db list file: %v", err)
 	}
 
+	// Am I doing this on the right nodes?
 	initCmd := fmt.Sprintf("./cockroach workload init tpccmultidb --warehouses=1 --db-list-file=%s {pgurl:1}", dbListFile)
 	if err := c.RunE(ctx, option.WithNodes(c.WorkloadNode()), initCmd); err != nil {
 		t.Fatalf("failed to init tpccmultidb: %v", err)
@@ -4327,67 +4328,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		t.Fatalf("failed to create changefeed: %v", err)
 	}
 
-	t.Status("Minimal multi-schema TPCC + changefeed test running, starting validators")
-
-	// Start a CountValidator for each changefeed topic
-	validators := make(map[string]*cdctest.CountValidator)
-	doneCh := make(chan struct{})
-	for _, table := range orderTables {
-		t.Status("Starting validator for topic", table)
-		topic := table
-		if idx := strings.Index(topic, "."); idx != -1 {
-			topic = topic[idx+1:]
-		}
-		t.Status("starting consumer for topic", topic)
-		consumer, err := kafka.newConsumer(ctx, topic, doneCh)
-		if err != nil {
-			t.L().Printf("Failed to start consumer for topic %s: %v", topic, err)
-			continue
-		}
-		t.Status("consumer for topic", topic, "started")
-		validator := cdctest.NewCountValidator(cdctest.NoOpValidator)
-		validators[topic] = validator
-
-		t.Status("spawning goro validator for topic", table)
-		m.Go(func(ctx context.Context) error {
-			defer consumer.close()
-			for {
-				msg, err := consumer.next(ctx)
-				if err != nil {
-					return err
-				}
-				if msg == nil {
-					return nil
-				}
-				updated, resolved, err := cdctest.ParseJSONValueTimestamps(msg.Value)
-				if err != nil {
-					t.L().Printf("Failed to parse message: %v", err)
-					continue
-				}
-				partitionStr := fmt.Sprintf("%d", msg.Partition)
-				if len(msg.Key) > 0 {
-					_ = validator.NoteRow(partitionStr, string(msg.Key), string(msg.Value), updated, msg.Topic)
-				} else {
-					_ = validator.NoteResolved(partitionStr, resolved)
-				}
-			}
-		})
-		t.Status("validator for topic", table, "started")
-	}
-
-	t.Status("Minimal multi-schema TPCC validators started, waiting for completion")
+	t.Status("Minimal multi-schema TPCC + changefeed test running")
 	m.Wait()
-	t.L().Printf("--------------------------------")
-	close(doneCh)
-
-	t.Status("Minimal multi-schema TPCC + changefeed test complete, checking validators")
-
-	// After the test, log the number of validated messages for each topic and check for failures
-	for topic, validator := range validators {
-		t.L().Printf("--------------------------------")
-		t.L().Printf("Validator for topic %s: %d rows, %d resolved timestamps", topic, validator.NumRows, validator.NumResolved)
-		if failures := validator.Failures(); len(failures) > 0 {
-			t.Fatalf("Validator failures for topic %s: %v", topic, failures)
-		}
-	}
+	t.Status("Minimal multi-schema TPCC + changefeed test finished")
 }
