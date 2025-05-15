@@ -4372,6 +4372,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 
 	t.Status("Minimal multi-schema TPCC + changefeed test running")
 	m.Wait()
+	close(doneCh)
 
 	// After the test, log the number of validated messages for each topic and check for failures
 	for topic, validator := range validators {
