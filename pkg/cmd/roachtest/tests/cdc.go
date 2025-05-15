@@ -4294,6 +4294,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	for _, schema := range schemaNames {
 		dbList = append(dbList, fmt.Sprintf("%s.%s", dbName, schema))
 	}
+	t.L().Printf("db list: %s", dbList)
 	err := c.PutString(ctx, strings.Join(dbList, "\n"), dbListFile, 0644, c.WorkloadNode())
 	if err != nil {
 		t.Fatalf("failed to write db list file: %v", err)
@@ -4305,7 +4306,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		t.Fatalf("failed to init tpccmultidb: %v", err)
 	}
 
-	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=5m --db-list-file=%s {pgurl:1}", dbListFile)
+	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=20s --db-list-file=%s {pgurl:1}", dbListFile)
 	m := c.NewMonitor(ctx, c.All())
 	m.Go(func(ctx context.Context) error {
 		return c.RunE(ctx, option.WithNodes(c.WorkloadNode()), workloadCmd)
@@ -4319,10 +4320,12 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	for _, schema := range schemaNames {
 		orderTables = append(orderTables, fmt.Sprintf("%s.order", schema))
 	}
+	t.L().Printf("order tables: %s", orderTables)
 	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
 
 	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='10s', full_table_name", strings.Join(orderTables, ", "), kafka.sinkURL(ctx))
+	t.L().Printf("changefeed statement: %s", changefeedStmt)
 	var jobID int
 	if err := db.QueryRow(changefeedStmt).Scan(&jobID); err != nil {
 		t.Fatalf("failed to create changefeed: %v", err)
