@@ -4278,8 +4278,8 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	c.Start(ctx, t.L(), option.DefaultStartOpts(), install.MakeClusterSettings(), c.All())
 
 	dbName := "defaultdb"
-	schemaNames := []string{"schema1", "schema2"}
-	db := c.Conn(ctx, t.L(), 1)
+	schemaNames := []string{"schema1", "schema2", "schema3", "schema4", "schema5"}
+	db := c.Conn(ctx, t.L(), 3)
 	if _, err := db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName)); err != nil {
 		t.Fatalf("failed to create db %s: %v", dbName, err)
 	}
@@ -4300,13 +4300,12 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		t.Fatalf("failed to write db list file: %v", err)
 	}
 
-	// Am I doing this on the right nodes?
-	initCmd := fmt.Sprintf("./cockroach workload init tpccmultidb --warehouses=1 --db-list-file=%s {pgurl:1}", dbListFile)
+	initCmd := fmt.Sprintf("./cockroach workload init tpccmultidb --warehouses=1 --db-list-file=%s {pgurl:1-3}", dbListFile)
 	if err := c.RunE(ctx, option.WithNodes(c.WorkloadNode()), initCmd); err != nil {
 		t.Fatalf("failed to init tpccmultidb: %v", err)
 	}
 
-	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=20s --db-list-file=%s {pgurl:1}", dbListFile)
+	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=2m --db-list-file=%s {pgurl:1-3}", dbListFile)
 	m := c.NewMonitor(ctx, c.All())
 	m.Go(func(ctx context.Context) error {
 		return c.RunE(ctx, option.WithNodes(c.WorkloadNode()), workloadCmd)
