@@ -4328,5 +4328,56 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	}
 
 	t.Status("Minimal multi-schema TPCC + changefeed test running")
+
+	// Start a CountValidator for each changefeed topic
+	validators := make(map[string]*cdctest.CountValidator)
+	doneCh := make(chan struct{})
+	for _, table := range orderTables {
+		topic := table
+		if idx := strings.Index(topic, "."); idx != -1 {
+			topic = topic[idx+1:]
+		}
+		consumer, err := kafka.newConsumer(ctx, topic, doneCh)
+		if err != nil {
+			t.L().Printf("Failed to start consumer for topic %s: %v", topic, err)
+			continue
+		}
+		validator := cdctest.NewCountValidator(cdctest.NoOpValidator)
+		validators[topic] = validator
+
+		m.Go(func(ctx context.Context) error {
+			defer consumer.close()
+			for {
+				msg, err := consumer.next(ctx)
+				if err != nil {
+					return err
+				}
+				if msg == nil {
+					return nil
+				}
+				updated, resolved, err := cdctest.ParseJSONValueTimestamps(msg.Value)
+				if err != nil {
+					t.L().Printf("Failed to parse message: %v", err)
+					continue
+				}
+				partitionStr := fmt.Sprintf("%d", msg.Partition)
+				if len(msg.Key) > 0 {
+					_ = validator.NoteRow(partitionStr, string(msg.Key), string(msg.Value), updated, msg.Topic)
+				} else {
+					_ = validator.NoteResolved(partitionStr, resolved)
+				}
+			}
+		})
+	}
+
+	t.Status("Minimal multi-schema TPCC + changefeed test running")
 	m.Wait()
+
+	// After the test, log the number of validated messages for each topic and check for failures
+	for topic, validator := range validators {
+		t.L().Printf("Validator for topic %s: %d rows, %d resolved timestamps", topic, validator.NumRows, validator.NumResolved)
+		if failures := validator.Failures(); len(failures) > 0 {
+			t.Fatalf("Validator failures for topic %s: %v", topic, failures)
+		}
+	}
 }
