@@ -4329,7 +4329,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		t.Fatalf("failed to init tpccmultidb: %v", err)
 	}
 
-	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=2m --db-list-file=%s {pgurl:1-3}", dbListFile)
+	workloadCmd := fmt.Sprintf("./cockroach workload run tpccmultidb --warehouses=1 --duration=5m --db-list-file=%s {pgurl:1-3}", dbListFile)
 	m := c.NewMonitor(ctx, c.All())
 	m.Go(func(ctx context.Context) error {
 		return c.RunE(ctx, option.WithNodes(c.WorkloadNode()), workloadCmd)
