@@ -4275,7 +4275,14 @@ func verifyMetricsNonZero(names ...string) func(metrics map[string]*prompb.Metri
 
 // Minimal test: multi-db tpcc workload and multi-table changefeed.
 func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluster) {
-	c.Start(ctx, t.L(), option.DefaultStartOpts(), install.MakeClusterSettings(), c.All())
+	startOpts := option.DefaultStartOpts()
+	startOpts.RoachprodOpts.ExtraArgs = append(startOpts.RoachprodOpts.ExtraArgs,
+		"--vmodule=changefeed=2",
+		"--vmodule=changefeed_processors=2",
+		"--vmodule=protected_timestamps=2",
+	)
+
+	c.Start(ctx, t.L(), startOpts, install.MakeClusterSettings(), c.All())
 
 	dbName := "defaultdb"
 	schemaNames := []string{"schema1", "schema2", "schema3", "schema4", "schema5"}

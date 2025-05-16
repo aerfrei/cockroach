@@ -1703,6 +1703,7 @@ func (b *changefeedResumer) CollectProfile(ctx context.Context, execCtx interfac
 		p.ExecCfg().InternalDB, aggStatsCopy)
 }
 
+// AF:
 // Try to clean up a protected timestamp created by the changefeed.
 func (b *changefeedResumer) maybeCleanUpProtectedTimestamp(
 	ctx context.Context, db isql.DB, pts protectedts.Manager, ptsID uuid.UUID,

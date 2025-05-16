@@ -20,6 +20,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/util/uuid"
 )
 
+// AF:
 // createProtectedTimestampRecord will create a record to protect the spans for
 // this changefeed at the resolved timestamp.
 func createProtectedTimestampRecord(

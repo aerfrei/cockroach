@@ -1883,6 +1883,7 @@ func (cf *changeFrontier) checkpointJobProgress(
 	return true, nil
 }
 
+// AF:
 // manageProtectedTimestamps periodically advances the protected timestamp for
 // the changefeed's targets to the current highwater mark.  The record is
 // cleared during changefeedResumer.OnFailOrCancel
@@ -1926,6 +1927,7 @@ func (cf *changeFrontier) manageProtectedTimestamps(
 		if preserveDeprecatedPts := cf.knobs.PreserveDeprecatedPts != nil && cf.knobs.PreserveDeprecatedPts(); preserveDeprecatedPts {
 			return false, nil
 		}
+		// AF: does this need to be supported still?
 		if err := cf.remakePTSRecord(ctx, pts, progress, highWater); err != nil {
 			return false, err
 		}
