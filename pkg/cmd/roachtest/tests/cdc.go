@@ -4296,6 +4296,23 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		}
 	}
 
+	// Aggressive GC and PTS settings for fast test and visible log activity
+	if _, err := db.Exec("ALTER DATABASE defaultdb CONFIGURE ZONE USING gc.ttlseconds = 1"); err != nil {
+		t.Fatalf("failed to set GC TTL: %v", err)
+	}
+	if _, err := db.Exec("SET CLUSTER SETTING changefeed.protect_timestamp_interval = '10s'"); err != nil {
+		t.Fatalf("failed to set PTS interval: %v", err)
+	}
+	if _, err := db.Exec("SET CLUSTER SETTING changefeed.protect_timestamp.lag = '5s'"); err != nil {
+		t.Fatalf("failed to set PTS lag: %v", err)
+	}
+	if _, err := db.Exec("SET CLUSTER SETTING kv.closed_timestamp.target_duration = '100ms'"); err != nil {
+		t.Fatalf("failed to set closed timestamp: %v", err)
+	}
+	if _, err := db.Exec("SET CLUSTER SETTING kv.protectedts.poll_interval = '10ms'"); err != nil {
+		t.Fatalf("failed to set PTS poll interval: %v", err)
+	}
+
 	dbListFile := "/tmp/tpcc_db_list.txt"
 	dbList := []string{}
 	for _, schema := range schemaNames {
