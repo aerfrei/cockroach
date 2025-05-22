@@ -1913,9 +1913,15 @@ func (cf *changeFrontier) manageProtectedTimestamps(
 	ctx, sp := tracing.ChildSpan(ctx, "changefeed.frontier.manage_protected_timestamps")
 	defer sp.Finish()
 
+	start := timeutil.Now()
+	defer func() {
+		cf.metrics.PTSUpdateNanos.RecordValue(timeutil.Since(start).Nanoseconds())
+	}()
+
 	ptsUpdateInterval := changefeedbase.ProtectTimestampInterval.Get(&cf.FlowCtx.Cfg.Settings.SV)
 	ptsUpdateLag := changefeedbase.ProtectTimestampLag.Get(&cf.FlowCtx.Cfg.Settings.SV)
 	if timeutil.Since(cf.lastProtectedTimestampUpdate) < ptsUpdateInterval {
+		cf.metrics.PTSSkippedUpdates.Inc(1)
 		return false, nil
 	}
 
@@ -1932,11 +1938,13 @@ func (cf *changeFrontier) manageProtectedTimestamps(
 			ctx, cf.FlowCtx.Codec(), cf.spec.JobID, AllTargets(cf.spec.Feed), highWater,
 		)
 		progress.ProtectedTimestampRecord = ptr.ID.GetUUID()
+		cf.metrics.PTSUpdates.Inc(1)
 		return true, pts.Protect(ctx, ptr)
 	}
 
 	rec, err := pts.GetRecord(ctx, progress.ProtectedTimestampRecord)
 	if err != nil {
+		cf.metrics.PTSErrors.Inc(1)
 		return false, err
 	}
 
@@ -1948,8 +1956,10 @@ func (cf *changeFrontier) manageProtectedTimestamps(
 			return false, nil
 		}
 		if err := cf.remakePTSRecord(ctx, pts, progress, highWater); err != nil {
+			cf.metrics.PTSErrors.Inc(1)
 			return false, err
 		}
+		cf.metrics.PTSUpdates.Inc(1)
 		return true, nil
 	}
 
@@ -1961,8 +1971,10 @@ func (cf *changeFrontier) manageProtectedTimestamps(
 			return false, nil
 		}
 		if err := cf.remakePTSRecord(ctx, pts, progress, highWater); err != nil {
+			cf.metrics.PTSErrors.Inc(1)
 			return false, err
 		}
+		cf.metrics.PTSUpdates.Inc(1)
 		return true, nil
 	}
 
@@ -1971,10 +1983,12 @@ func (cf *changeFrontier) manageProtectedTimestamps(
 	// changefeed restarts, which can cause contention and second order effects
 	// on system tables.
 	if !rec.Timestamp.AddDuration(ptsUpdateLag).Less(highWater) {
+		cf.metrics.PTSSkippedUpdates.Inc(1)
 		return false, nil
 	}
 
 	log.VEventf(ctx, 2, "updating protected timestamp %v at %v", progress.ProtectedTimestampRecord, highWater)
+	cf.metrics.PTSUpdates.Inc(1)
 	return true, pts.UpdateTimestamp(ctx, progress.ProtectedTimestampRecord, highWater)
 }
 

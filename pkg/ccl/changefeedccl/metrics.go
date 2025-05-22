@@ -789,6 +789,34 @@ var (
 		Measurement: "Bytes",
 		Unit:        metric.Unit_COUNT,
 	}
+
+	metaChangefeedPTSUpdateNanos = metric.Metadata{
+		Name:        "changefeed.protected_timestamp.update_nanos",
+		Help:        "Time spent updating protected timestamp records",
+		Measurement: "Nanoseconds",
+		Unit:        metric.Unit_NANOSECONDS,
+	}
+
+	metaChangefeedPTSUpdates = metric.Metadata{
+		Name:        "changefeed.protected_timestamp.updates",
+		Help:        "Number of protected timestamp record updates",
+		Measurement: "Updates",
+		Unit:        metric.Unit_COUNT,
+	}
+
+	metaChangefeedPTSSkippedUpdates = metric.Metadata{
+		Name:        "changefeed.protected_timestamp.skipped_updates",
+		Help:        "Number of protected timestamp record updates that were skipped due to throttling",
+		Measurement: "Updates",
+		Unit:        metric.Unit_COUNT,
+	}
+
+	metaChangefeedPTSErrors = metric.Metadata{
+		Name:        "changefeed.protected_timestamp.errors",
+		Help:        "Number of errors encountered while managing protected timestamp records",
+		Measurement: "Errors",
+		Unit:        metric.Unit_COUNT,
+	}
 )
 
 func newAggregateMetrics(histogramWindow time.Duration, lookup *cidr.Lookup) *AggMetrics {
@@ -1292,6 +1320,10 @@ type Metrics struct {
 	ParallelConsumerFlushNanos     metric.IHistogram
 	ParallelConsumerConsumeNanos   metric.IHistogram
 	ParallelConsumerInFlightEvents *metric.Gauge
+	PTSUpdateNanos                 metric.IHistogram
+	PTSUpdates                     *metric.Counter
+	PTSSkippedUpdates              *metric.Counter
+	PTSErrors                      *metric.Counter
 
 	mu struct {
 		syncutil.Mutex
@@ -1326,6 +1358,16 @@ func MakeMetrics(histogramWindow time.Duration, lookup *cidr.Lookup) metric.Stru
 		}),
 		FrontierUpdates: metric.NewCounter(metaChangefeedFrontierUpdates),
 		ThrottleMetrics: cdcutils.MakeMetrics(histogramWindow),
+		PTSUpdateNanos: metric.NewHistogram(metric.HistogramOptions{
+			Metadata:     metaChangefeedPTSUpdateNanos,
+			Duration:     histogramWindow,
+			MaxVal:       changefeedCheckpointHistMaxLatency.Nanoseconds(),
+			SigFigs:      2,
+			BucketConfig: metric.IOLatencyBuckets,
+		}),
+		PTSUpdates:        metric.NewCounter(metaChangefeedPTSUpdates),
+		PTSSkippedUpdates: metric.NewCounter(metaChangefeedPTSSkippedUpdates),
+		PTSErrors:         metric.NewCounter(metaChangefeedPTSErrors),
 		// Below two metrics were never implemented using the hdr histogram. Set ForceUsePrometheus
 		// to true.
 		ParallelConsumerFlushNanos: metric.NewHistogram(metric.HistogramOptions{
