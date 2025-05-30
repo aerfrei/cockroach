@@ -304,6 +304,16 @@ func changefeedPlanHook(
 		{
 			var ptr *ptpb.Record
 			codec := p.ExecCfg().Codec
+			targets := SplitTargetsFromDetails(details)
+			for _, target := range targets {
+				ptr = createProtectedTimestampRecord(
+					ctx,
+					codec,
+					jobID,
+					target,
+					details.StatementTime,
+				)
+			}
 			ptr = createProtectedTimestampRecord(
 				ctx,
 				codec,

@@ -33,7 +33,7 @@ func createProtectedTimestampRecord(
 	deprecatedSpansToProtect := makeSpansToProtect(codec, targets)
 	targetToProtect := makeTargetToProtect(targets)
 
-	log.VEventf(ctx, 2, "creating protected timestamp %v at %v", ptsID, resolved)
+	log.Eventf(ctx, "creating protected timestamp %v at %v", ptsID, resolved)
 	return jobsprotectedts.MakeRecord(
 		ptsID, int64(jobID), resolved, deprecatedSpansToProtect,
 		jobsprotectedts.Jobs, targetToProtect)

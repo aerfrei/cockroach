@@ -78,6 +78,43 @@ func AllTargets(cd jobspb.ChangefeedDetails) (targets changefeedbase.Targets) {
 	return
 }
 
+// SplitTargetsFromDetails returns a slice of changefeedbase.Targets,
+// each representing a single target from the ChangefeedDetails.
+func SplitTargetsFromDetails(cd jobspb.ChangefeedDetails) []changefeedbase.Targets {
+	var result []changefeedbase.Targets
+	// Prefer the new TargetSpecifications field if present.
+	if len(cd.TargetSpecifications) > 0 {
+		for _, ts := range cd.TargetSpecifications {
+			if ts.TableID > 0 {
+				name := ts.StatementTimeName
+				if name == "" && cd.Tables[ts.TableID].StatementTimeName != "" {
+					name = cd.Tables[ts.TableID].StatementTimeName
+				}
+				targets := changefeedbase.Targets{}
+				targets.Add(changefeedbase.Target{
+					Type:              ts.Type,
+					TableID:           ts.TableID,
+					FamilyName:        ts.FamilyName,
+					StatementTimeName: changefeedbase.StatementTimeName(name),
+				})
+				result = append(result, targets)
+			}
+		}
+	} else {
+		// Legacy fallback: use the Tables map.
+		for id, t := range cd.Tables {
+			targets := changefeedbase.Targets{}
+			targets.Add(changefeedbase.Target{
+				Type:              jobspb.ChangefeedTargetSpecification_PRIMARY_FAMILY_ONLY,
+				TableID:           id,
+				StatementTimeName: changefeedbase.StatementTimeName(t.StatementTimeName),
+			})
+			result = append(result, targets)
+		}
+	}
+	return result
+}
+
 const (
 	// metaSentinel is a key or prefix used to mark metadata fields or columns
 	// into rows returned by an encoder.
