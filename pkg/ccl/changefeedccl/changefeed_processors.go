@@ -1919,6 +1919,7 @@ func (cf *changeFrontier) manageProtectedTimestamps(
 		return false, nil
 	}
 
+	defer cf.sliMetrics.Timers.PTSManage.Start()()
 	pts := cf.FlowCtx.Cfg.ProtectedTimestampProvider.WithTxn(txn)
 
 	// Create / advance the protected timestamp record to the highwater mark

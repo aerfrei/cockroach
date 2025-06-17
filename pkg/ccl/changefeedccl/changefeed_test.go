@@ -11474,14 +11474,26 @@ func TestChangefeedProtectedTimestampUpdate(t *testing.T) {
 
 		sqlDB.Exec(t, `CREATE TABLE foo (id INT)`)
 
+		registry := s.Server.JobRegistry().(*jobs.Registry)
+		metrics := registry.MetricsStruct().Changefeed.(*Metrics)
+		createPtsCount, _ := metrics.AggMetrics.Timers.PTSCreate.WindowedSnapshot().Total()
+		managePtsCount, _ := metrics.AggMetrics.Timers.PTSManage.WindowedSnapshot().Total()
+		require.Equal(t, int64(0), createPtsCount)
+		require.Equal(t, int64(0), managePtsCount)
+
 		createStmt := `CREATE CHANGEFEED FOR foo WITH resolved='10ms', no_initial_scan`
 		testFeed := feed(t, f, createStmt)
 		defer closeFeed(t, testFeed)
 
+		createPtsCount, _ = metrics.AggMetrics.Timers.PTSCreate.WindowedSnapshot().Total()
+		managePtsCount, _ = metrics.AggMetrics.Timers.PTSManage.WindowedSnapshot().Total()
+		require.Equal(t, int64(1), createPtsCount)
+		require.Equal(t, int64(0), managePtsCount)
+
 		eFeed, ok := testFeed.(cdctest.EnterpriseTestFeed)
 		require.True(t, ok)
 
-		// Wait for the changefeed to checkpoint.
+		// Wait for the changefeed to checkpoint and update PTS at least once.
 		var lastHWM hlc.Timestamp
 		checkHWM := func() error {
 			hwm, err := eFeed.HighWaterMark()
@@ -11526,6 +11538,9 @@ func TestChangefeedProtectedTimestampUpdate(t *testing.T) {
 		sqlDB.QueryRow(t, ptsQry).Scan(&ts2)
 		require.NoError(t, err)
 		require.Less(t, ts, ts2)
+
+		managePtsCount, _ = metrics.AggMetrics.Timers.PTSManage.WindowedSnapshot().Total()
+		require.GreaterOrEqual(t, managePtsCount, int64(2))
 	}
 
 	withTxnRetries := withArgsFn(func(args *base.TestServerArgs) {

@@ -1211,7 +1211,7 @@ layers:
     - name: changefeed.checkpoint_hist_nanos
       exported_name: changefeed_checkpoint_hist_nanos
       description: Time spent checkpointing changefeed progress
-      y_axis_label: Changefeeds
+      y_axis_label: Nanoseconds
       type: HISTOGRAM
       unit: NANOSECONDS
       aggregation: AVG
@@ -1412,6 +1412,22 @@ layers:
       exported_name: changefeed_parallel_io_result_queue_nanos
       description: Time that incoming results from the sink spend waiting in parallel io emitter before they are acknowledged by the changefeed
       y_axis_label: Nanoseconds
+      type: HISTOGRAM
+      unit: NANOSECONDS
+      aggregation: AVG
+      derivative: NONE
+    - name: changefeed.pts.create_nanos
+      exported_name: changefeed_pts_create_nanos
+      description: Time spent creating protected timestamp records on changefeed creation
+      y_axis_label: Latency
+      type: HISTOGRAM
+      unit: NANOSECONDS
+      aggregation: AVG
+      derivative: NONE
+    - name: changefeed.pts.manage_nanos
+      exported_name: changefeed_pts_manage_nanos
+      description: Time spent managing protected timestamps on highwater advance, including time spent creating new protected timestamps when needed
+      y_axis_label: Latency
       type: HISTOGRAM
       unit: NANOSECONDS
       aggregation: AVG
