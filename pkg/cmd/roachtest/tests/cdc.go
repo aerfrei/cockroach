@@ -4361,6 +4361,8 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		"--vmodule=protected_timestamps=2",
 	)
 
+	// try bigger cluster and null sink
+
 	c.Start(ctx, t.L(), startOpts, install.MakeClusterSettings(), c.All())
 
 	dbName := "defaultdb"
@@ -4415,10 +4417,10 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 		orderTables = append(orderTables, fmt.Sprintf("%s.order", schema))
 	}
 	t.L().Printf("order tables: %s", orderTables)
-	kafka, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
+	_, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
 
-	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='4s', full_table_name", strings.Join(orderTables, ", "), kafka.sinkURL(ctx))
+	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='4s', full_table_name", strings.Join(orderTables, ", "), "null://")
 	t.L().Printf("changefeed statement: %s", changefeedStmt)
 	var jobID int
 	if err := db.QueryRow(changefeedStmt).Scan(&jobID); err != nil {
