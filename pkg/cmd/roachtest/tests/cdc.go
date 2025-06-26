@@ -4420,7 +4420,7 @@ func runCDCMultiDBTPCCMinimal(ctx context.Context, t test.Test, c cluster.Cluste
 	_, cleanup := setupKafka(ctx, t, c, c.Node(c.Spec().NodeCount))
 	defer cleanup()
 
-	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='4s', full_table_name", strings.Join(orderTables, ", "), "null://")
+	changefeedStmt := fmt.Sprintf("CREATE CHANGEFEED FOR %s INTO '%s' WITH format='json', resolved='1s', full_table_name, min_checkpoint_frequency='1s'", strings.Join(orderTables, ", "), "null://")
 	t.L().Printf("changefeed statement: %s", changefeedStmt)
 	var jobID int
 	if err := db.QueryRow(changefeedStmt).Scan(&jobID); err != nil {
